@@ -46,6 +46,41 @@ def formatear_emplazamiento(emplazamiento):
     emplazamiento_formateado = emplazamiento_formateado.lstrip()
     return emplazamiento_formateado
 
+def limpiar_title(title):
+    """Limpia el title para usar en URL: quita /, dobles espacios y codifica espacios."""
+    # Quitar barras
+    title = title.replace('/', '')
+    # Quitar dobles espacios
+    title = re.sub(r'\s+', ' ', title)
+    # Codificar espacios como %20
+    title = title.replace(' ', '%20')
+    return title
+
+def accion_a_tipos(accion):
+    """Convierte el texto de acción a tipos abreviados de preventivos."""
+    tipos = set()
+    accion_upper = accion.upper()
+    
+    # Mapeo exacto de nombres de preventivos a tipos
+    mapeo_tipos = {
+        'MP EB BT ANUAL': 'BT',
+        'MP EB OC ANUAL': 'OC',
+        'MP EB ANTENA ANUAL': 'SA',
+        'MP EB ALIM EQ RADIO': 'AE',
+        'MP CABLE DE VIDA ANUAL': 'GS',
+        'MP EB CF ANUAL': 'CF',
+        'MP EB AA ANUAL': 'AA',
+        'MP EB ARMARIO INTEMPERIE': 'AI'
+    }
+    
+    # Buscar coincidencias exactas en el texto de acción
+    for nombre, tipo in mapeo_tipos.items():
+        if nombre in accion_upper:
+            tipos.add(tipo)
+    
+    # Si no se encontraron tipos, devolver lista vacía
+    return sorted(list(tipos))
+
 def leer_excel_emplazamientos(archivo):
     """Lee el archivo de emplazamientos y retorna una lista."""
     hoja_excel = archivo.worksheets[0]
@@ -99,7 +134,15 @@ def buscar_coincidencia(lista_preventivos, lista_emplazamientos, indice):
             if IndiceCoincidencia(None, preventivo[indice], emplazamiento[1]).ratio() > 0.7:
                 latitud = emplazamiento[2]
                 altitud = emplazamiento[3]
-                lista.append(["Preventivos", "#FF0000", latitud, altitud, nombre_preventivo, accion, "#71b300", emplazamiento[0]])
+                # Limpiar title y obtener tipos
+                title_limpio = limpiar_title(nombre_preventivo)
+                tipos = accion_a_tipos(accion)
+                # Generar URL con parámetros de tipos individuales
+                tipos_params = '&'.join([f"{tipo}=1" for tipo in tipos])
+                url = f"https://preventivos-rgkk.onrender.com/rellenar?title={title_limpio}"
+                if tipos_params:
+                    url += f"&{tipos_params}"
+                lista.append(["Preventivos", "#FF0000", latitud, altitud, nombre_preventivo, url, "#71b300", emplazamiento[0]])
                 contador_coincidencias += 1
                 emplazamiento_coincidencia.append(emplazamiento)
         if contador_coincidencias == 0:
@@ -131,7 +174,18 @@ def coincidencias(lista_preventivos, lista_emplazamientos):
     for item in lista_preventivos[0]:
         lista_coincidencia.append(item)
     for item in lista_preventivos[1]:
-        lista_coincidencia.append(["Preventivos", "#FF0000", 0, 0, item[0], item[4], "#FF0000"])
+        # Generar URL para preventivos sin coincidencia
+        nombre_preventivo = item[0]
+        accion = item[4]
+        # Limpiar title y obtener tipos
+        title_limpio = limpiar_title(nombre_preventivo)
+        tipos = accion_a_tipos(accion)
+        # Generar URL con parámetros de tipos individuales
+        tipos_params = '&'.join([f"{tipo}=1" for tipo in tipos])
+        url = f"https://preventivos-rgkk.onrender.com/rellenar?title={title_limpio}"
+        if tipos_params:
+            url += f"&{tipos_params}"
+        lista_coincidencia.append(["Preventivos", "#FF0000", 0, 0, nombre_preventivo, url, "#FF0000"])
     
     # Combinar las múltiples coincidencias de ambas vueltas
     lista_multiple = lista_multiple_vuelta1 + lista_preventivos[2]
@@ -455,6 +509,65 @@ def guardar_configuracion_mapa(tipo_preventivo, configuraciones, info_especial):
 @app.route('/')
 def index():
     return render_template('index.html')
+
+@app.route('/rellenar')
+def rellenar():
+    """Ruta para rellenar preventivos basándose en parámetros de URL."""
+    title = request.args.get('title', '')
+    
+    # Obtener tipos de preventivos de los parámetros de URL
+    tipos = []
+    for key in request.args.keys():
+        if key.upper() in ['BT', 'OC', 'SA', 'AE', 'GS', 'CF', 'AA', 'AI']:
+            if request.args.get(key) == '1':
+                tipos.append(key.upper())
+    
+    # Leer el archivo mapa_preventivos.xlsx
+    try:
+        wb = openpyxl.load_workbook(MAPA_FILE)
+    except Exception as e:
+        flash(f'Error al cargar el archivo mapa_preventivos.xlsx: {str(e)}')
+        return redirect(url_for('index'))
+    
+    # Para cada tipo, buscar la hoja correspondiente y leer las preguntas
+    preguntas_por_tipo = {}
+    for tipo in tipos:
+        if tipo in wb.sheetnames:
+            hoja = wb[tipo]
+            preguntas = []
+            
+            # Leer filas desde la fila 2 (asumiendo que la fila 1 es el encabezado)
+            for fila in hoja.iter_rows(min_row=2, values_only=True):
+                pregunta = fila[0]  # Columna A
+                if pregunta:  # Si hay pregunta
+                    config = fila[4] if len(fila) > 4 else None  # Columna E
+                    valor = fila[5] if len(fila) > 5 else None  # Columna F
+                    
+                    # Solo incluir preguntas con configuración 'lista' o 'rellenar'
+                    if config and config.lower() in ['lista', 'rellenar']:
+                        # Si la configuración es 'lista', leer las siguientes columnas hasta encontrar una vacía
+                        lista_valores = []
+                        if config.lower() == 'lista':
+                            col_index = 5  # Empezar desde la columna F
+                            while col_index < len(fila) and fila[col_index]:
+                                lista_valores.append(fila[col_index])
+                                col_index += 1
+                        
+                        preguntas.append({
+                            'pregunta': pregunta,
+                            'config': config,
+                            'valor': valor,
+                            'lista_valores': lista_valores
+                        })
+            
+            preguntas_por_tipo[tipo] = preguntas
+    
+    wb.close()
+    
+    return render_template('rellenar.html', 
+                         title=title,
+                         tipos=tipos,
+                         preguntas_por_tipo=preguntas_por_tipo)
 
 @app.route('/comparar')
 def comparar():
