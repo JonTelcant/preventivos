@@ -1,0 +1,658 @@
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_file, session
+import openpyxl
+import os
+from datetime import datetime
+from werkzeug.utils import secure_filename
+from difflib import SequenceMatcher as IndiceCoincidencia
+import re
+import csv
+
+app = Flask(__name__)
+app.secret_key = 'tu_clave_secreta_aqui'
+app.config['SESSION_TYPE'] = 'filesystem'
+
+# Configuración
+UPLOAD_FOLDER = 'uploads'
+MAPA_FILE = 'mapa_preventivos.xlsx'
+ALLOWED_EXTENSIONS = {'xlsx'}
+DOWNLOAD_FOLDER = 'downloads'
+os.makedirs(DOWNLOAD_FOLDER, exist_ok=True)
+
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+# Funciones para comparación de preventivos y emplazamientos
+def formatear_emplazamiento(emplazamiento):
+    """Formatea el nombre del emplazamiento eliminando patrones comunes."""
+    emplazamiento_formateado = re.sub('(2G)', '', emplazamiento)
+    emplazamiento_formateado = re.sub('(3G)', '', emplazamiento_formateado)
+    emplazamiento_formateado = re.sub('(4G)', '', emplazamiento_formateado)
+    emplazamiento_formateado = re.sub('(C.T.)', '', emplazamiento_formateado)
+    emplazamiento_formateado = re.sub('(CT)', '', emplazamiento_formateado)
+    emplazamiento_formateado = re.sub('(REP-INT-GSM)', '', emplazamiento_formateado)
+    emplazamiento_formateado = re.sub('(--)', '', emplazamiento_formateado)
+    emplazamiento_formateado = re.sub('(ATW-T)', '', emplazamiento_formateado)
+    emplazamiento_formateado = re.sub('(ATW-V)', '', emplazamiento_formateado)
+    emplazamiento_formateado = re.sub('(ATW)', '', emplazamiento_formateado)
+    emplazamiento_formateado = re.sub('[-]', '', emplazamiento_formateado)
+    emplazamiento_formateado = re.sub('(TSM)', '', emplazamiento_formateado)
+    emplazamiento_formateado = re.sub('(T.S.M.)', '', emplazamiento_formateado)
+    emplazamiento_formateado = re.sub('(E.B.)', '', emplazamiento_formateado)
+    emplazamiento_formateado = re.sub('\s?\d', '', emplazamiento_formateado)
+    emplazamiento_formateado = emplazamiento_formateado.lstrip()
+    return emplazamiento_formateado
+
+def leer_excel_emplazamientos(archivo):
+    """Lee el archivo de emplazamientos y retorna una lista."""
+    hoja_excel = archivo.worksheets[0]
+    lista = []
+    for fila in hoja_excel.rows:
+        emplazamiento = fila[4].value
+        if emplazamiento:
+            emplazamiento_formateado = formatear_emplazamiento(str(emplazamiento))
+            latitud = fila[2].value
+            altitud = fila[3].value
+            lista.append([emplazamiento, emplazamiento_formateado, latitud, altitud])
+    return lista
+
+def leer_excel_preventivos(archivo):
+    """Lee el archivo de preventivos y retorna una lista."""
+    hoja_excel = archivo.worksheets[0]
+    lista = []
+    cont = 0
+    emplazamiento_a = "SALA ELEMENTO"
+    accion = ""
+    for fila in hoja_excel.rows:
+        cont += 1
+        if emplazamiento_a != fila[5].value:
+            if cont != 2:
+                lista.append([emplazamiento_a, emplazamiento_formateado_a, emplazamiento_b,
+                             emplazamiento_formateado_b, accion])
+            emplazamiento_a = fila[5].value
+            emplazamiento_b = fila[6].value
+            emplazamiento_formateado_a = formatear_emplazamiento(str(emplazamiento_a)) if emplazamiento_a else ""
+            emplazamiento_formateado_b = formatear_emplazamiento(str(emplazamiento_b)) if emplazamiento_b else ""
+            accion = str(fila[8].value) if fila[8].value else ""
+        else:
+            if cont != 1:
+                accion = accion + "\n" + str(fila[8].value)
+    lista.append([emplazamiento_a, emplazamiento_formateado_a, emplazamiento_b,
+                 emplazamiento_formateado_b, accion])
+    return lista
+
+def buscar_coincidencia(lista_preventivos, lista_emplazamientos, indice):
+    """Busca coincidencias entre preventivos y emplazamientos."""
+    lista_coincidencia = []
+    lista_sin_coincidencia = []
+    lista_multiple = []  # Para guardar preventivos con múltiples coincidencias
+    for preventivo in lista_preventivos:
+        contador_coincidencias = 0
+        lista = []
+        nombre_preventivo = preventivo[0]
+        accion = preventivo[4]
+        emplazamiento_coincidencia = []
+        for emplazamiento in lista_emplazamientos:
+            if IndiceCoincidencia(None, preventivo[indice], emplazamiento[1]).ratio() > 0.7:
+                latitud = emplazamiento[2]
+                altitud = emplazamiento[3]
+                lista.append(["Preventivos", "#FF0000", latitud, altitud, nombre_preventivo, accion, "#71b300", emplazamiento[0]])
+                contador_coincidencias += 1
+                emplazamiento_coincidencia.append(emplazamiento)
+        if contador_coincidencias == 0:
+            lista_sin_coincidencia.append(preventivo)
+        elif contador_coincidencias == 1:
+            lista_coincidencia.append(lista[0])
+        else:
+            # Guardar preventivo con múltiples coincidencias para revisión
+            lista_multiple.append({
+                'preventivo': preventivo,
+                'coincidencias': lista,
+                'indice': indice
+            })
+    lista_resultado = []
+    lista_resultado.append(lista_coincidencia)
+    lista_resultado.append(lista_sin_coincidencia)
+    lista_resultado.append(lista_multiple)
+    return lista_resultado
+
+def coincidencias(lista_preventivos, lista_emplazamientos):
+    """Realiza la búsqueda de coincidencias en dos vueltas."""
+    lista_preventivos = buscar_coincidencia(lista_preventivos, lista_emplazamientos, 1)
+    lista_coincidencia = lista_preventivos[0]
+    lista_sin_coincidencia = lista_preventivos[1]
+    lista_multiple_vuelta1 = lista_preventivos[2]
+    
+    lista_preventivos = buscar_coincidencia(lista_sin_coincidencia, lista_emplazamientos, 3)
+    
+    for item in lista_preventivos[0]:
+        lista_coincidencia.append(item)
+    for item in lista_preventivos[1]:
+        lista_coincidencia.append(["Preventivos", "#FF0000", 0, 0, item[0], item[4], "#FF0000"])
+    
+    # Combinar las múltiples coincidencias de ambas vueltas
+    lista_multiple = lista_multiple_vuelta1 + lista_preventivos[2]
+    
+    return lista_coincidencia, lista_multiple
+
+def obtener_tipo_preventivo(nombre_archivo):
+    """Determina el tipo de preventivo basándose en el nombre del archivo."""
+    nombre_upper = nombre_archivo.upper()
+    
+    if 'ALIMENTACIÓN' in nombre_upper or 'ALIMENTACION' in nombre_upper:
+        return 'AE'
+    elif 'ARMARIOS' in nombre_upper and 'INTEMPERIE' in nombre_upper:
+        return 'AI'
+    elif '_EBAA_' in nombre_upper or 'EBAA' in nombre_upper:
+        return 'AA'
+    elif '_SA_' in nombre_upper:
+        return 'SA'
+    elif '_GS' in nombre_upper:
+        return 'GS'
+    elif '_OC' in nombre_upper:
+        return 'OC'
+    elif 'BT' in nombre_upper:
+        return 'BT'
+    elif '_CF' in nombre_upper:
+        return 'CF'
+    else:
+        # Fallback
+        if 'SA' in nombre_upper:
+            return 'SA'
+        elif 'GS' in nombre_upper:
+            return 'GS'
+        elif 'OC' in nombre_upper:
+            return 'OC'
+        elif 'BT' in nombre_upper:
+            return 'BT'
+        elif 'CF' in nombre_upper:
+            return 'CF'
+        return 'DESCONOCIDO'
+
+def validar_archivo_preventivo(ruta_archivo):
+    """
+    Valida si un archivo es un preventivo válido.
+    Un preventivo válido debe tener:
+    - Una hoja llamada 'Maestra'
+    - La hoja Maestra debe estar protegida
+    - Tener celdas combinadas
+    """
+    try:
+        wb = openpyxl.load_workbook(ruta_archivo, data_only=True)
+        
+        # Verificar que tiene hoja Maestra
+        if 'Maestra' not in wb.sheetnames:
+            return False, "El archivo no contiene una hoja llamada 'Maestra'"
+        
+        ws_maestra = wb['Maestra']
+        
+        # Verificar que la hoja Maestra está protegida
+        if not ws_maestra.protection.sheet:
+            return False, "La hoja 'Maestra' no está protegida"
+        
+        # Verificar que tiene celdas combinadas
+        if len(ws_maestra.merged_cells.ranges) == 0:
+            return False, "La hoja 'Maestra' no tiene celdas combinadas"
+        
+        wb.close()
+        return True, "Archivo válido"
+        
+    except Exception as e:
+        return False, f"Error al leer el archivo: {str(e)}"
+
+def buscar_celda_por_texto(ws, texto_buscar):
+    """
+    Busca una celda que contenga el texto especificado.
+    Retorna la información de la celda encontrada o None.
+    """
+    for row in ws.iter_rows():
+        for cell in row:
+            if cell.value and isinstance(cell.value, str) and texto_buscar in cell.value:
+                # Obtener la celda a la derecha
+                col_derecha = cell.column + 1
+                celda_derecha = ws.cell(row=cell.row, column=col_derecha)
+                
+                return {
+                    'texto': texto_buscar,
+                    'coord': cell.coordinate,
+                    'coord_derecha': celda_derecha.coordinate,
+                    'valor_derecha': str(celda_derecha.value) if celda_derecha.value else ''
+                }
+    return None
+
+def analizar_archivo_excel(ruta_archivo):
+    """Analiza un archivo Excel y extrae las celdas editables con sus preguntas."""
+    nombre_archivo = os.path.basename(ruta_archivo)
+    tipo_preventivo = obtener_tipo_preventivo(nombre_archivo)
+    
+    celdas_info = []
+    info_especial = {
+        'elemento': None,
+        'hoja_validada': []
+    }
+    
+    # Preguntas especiales que siempre son defecto
+    preguntas_especiales = ['DNI/MATRICULA:', 'EMPRESA REALIZACIÓN:', 'TELÉFONO:']
+    
+    try:
+        wb = openpyxl.load_workbook(ruta_archivo, data_only=True)
+        
+        # Determinar qué hojas analizar
+        hojas_a_analizar = ['Maestra']
+        
+        # Si existe Hija1, agregarla
+        if 'Hija1' in wb.sheetnames:
+            hojas_a_analizar.append('Hija1')
+        
+        # Buscar ELEMENTO: siempre en Maestra
+        ws_maestra = wb['Maestra']
+        info_especial['elemento'] = buscar_celda_por_texto(ws_maestra, 'ELEMENTO:')
+        
+        # Buscar HOJA VALIDADA en Maestra y Hija1
+        for nombre_hoja in hojas_a_analizar:
+            ws = wb[nombre_hoja]
+            hoja_validada_info = buscar_celda_por_texto(ws, 'HOJA VALIDADA')
+            if hoja_validada_info:
+                hoja_validada_info['hoja'] = nombre_hoja
+                info_especial['hoja_validada'].append(hoja_validada_info)
+        
+        # Analizar celdas editables en las hojas correspondientes
+        for nombre_hoja in hojas_a_analizar:
+            ws = wb[nombre_hoja]
+            
+            for row in ws.iter_rows():
+                for cell in row:
+                    # Verificar si la celda no está bloqueada (editable)
+                    if not cell.protection.locked:
+                        # Evitar celdas combinadas que no son la esquina superior izquierda
+                        es_merge = type(cell).__name__ == 'MergedCell'
+                        if es_merge:
+                            continue
+                        
+                        # Verificar si pertenece a un rango de celdas combinadas
+                        rango_combinado = None
+                        esquina_1_1_coord = None
+                        for merged_range in ws.merged_cells.ranges:
+                            if cell.coordinate in merged_range:
+                                rango_combinado = str(merged_range)
+                                min_col, min_row, max_col, max_row = merged_range.bounds
+                                esquina_1_1_coord = ws.cell(row=min_row, column=min_col).coordinate
+                                break
+                        
+                        # Determinar la coordenada de la celda de respuesta
+                        coord_respuesta = esquina_1_1_coord if esquina_1_1_coord else cell.coordinate
+                        
+                        # Obtener la pregunta a la izquierda
+                        col_respuesta = openpyxl.utils.column_index_from_string(coord_respuesta[0])
+                        fila_respuesta = int(coord_respuesta[1:])
+                        
+                        pregunta_texto = ""
+                        pregunta_coord = ""
+                        
+                        if col_respuesta > 1:
+                            celda_izquierda = ws.cell(row=fila_respuesta, column=col_respuesta-1)
+                            pregunta_coord = celda_izquierda.coordinate
+                            
+                            # Verificar si la celda izquierda está en un rango combinado
+                            pregunta_esquina_1_1 = None
+                            for preg_merged in ws.merged_cells.ranges:
+                                if celda_izquierda.coordinate in preg_merged:
+                                    preg_min_col, preg_min_row, _, _ = preg_merged.bounds
+                                    pregunta_esquina_1_1 = ws.cell(row=preg_min_row, column=preg_min_col)
+                                    pregunta_coord = pregunta_esquina_1_1.coordinate
+                                    pregunta_texto = str(pregunta_esquina_1_1.value) if pregunta_esquina_1_1.value else ""
+                                    break
+                            
+                            if not pregunta_esquina_1_1:
+                                pregunta_texto = str(celda_izquierda.value) if celda_izquierda.value else ""
+                        
+                        # Verificar si tiene validación de datos
+                        es_lista = False
+                        lista_valores = ""
+                        for dv in ws.data_validations.dataValidation:
+                            if cell.coordinate in dv.sqref:
+                                if getattr(dv, 'type', '') == 'list':
+                                    es_lista = True
+                                    formula1 = getattr(dv, 'formula1', '')
+                                    if formula1 and formula1 != 'N/A':
+                                        # Extraer valores de la fórmula (ej: "C,IG,IR,NP")
+                                        lista_valores = formula1.strip('"')
+                                break
+                        
+                        # Determinar si es una pregunta especial
+                        config_default = None
+                        valor_default = ''
+                        for preg_especial in preguntas_especiales:
+                            if preg_especial in pregunta_texto:
+                                config_default = 'defecto'
+                                valor_default = ''  # Se llenará con valores globales
+                                break
+                        
+                        celdas_info.append({
+                            'pregunta': pregunta_texto,
+                            'coord_celda': cell.coordinate,
+                            'coord_respuesta': coord_respuesta,
+                            'es_lista': es_lista,
+                            'lista_valores': lista_valores,
+                            'hoja': nombre_hoja,
+                            'config_default': config_default,
+                            'valor_default': valor_default
+                        })
+        
+        wb.close()
+        
+    except Exception as e:
+        return None, str(e), None
+    
+    return celdas_info, None, info_especial
+
+def asegurar_mapa_preventivos(tipo_preventivo):
+    """
+    Asegura que existe el archivo mapa_preventivos.xlsx y la hoja del tipo de preventivo.
+    Si no existen, los crea.
+    """
+    try:
+        # Verificar si existe el archivo
+        if not os.path.exists(MAPA_FILE):
+            # Crear archivo nuevo
+            wb = openpyxl.Workbook()
+            # Eliminar hoja por defecto
+            if 'Sheet' in wb.sheetnames:
+                del wb['Sheet']
+        else:
+            # Abrir archivo existente
+            wb = openpyxl.load_workbook(MAPA_FILE)
+        
+        # Verificar si existe la hoja del tipo de preventivo
+        if tipo_preventivo not in wb.sheetnames:
+            ws = wb.create_sheet(title=tipo_preventivo)
+            # Crear encabezados (sin columna Es Lista, con Hoja)
+            headers = ['Pregunta', 'Posición Celda', 'Posición Respuesta', 'Hoja', 'Configuración', 'Valor']
+            for col, header in enumerate(headers, start=1):
+                ws.cell(row=1, column=col, value=header)
+            
+            # Ajustar ancho de columnas
+            ws.column_dimensions['A'].width = 50
+            ws.column_dimensions['B'].width = 15
+            ws.column_dimensions['C'].width = 15
+            ws.column_dimensions['D'].width = 10
+            ws.column_dimensions['E'].width = 15
+            ws.column_dimensions['F'].width = 30
+        
+        wb.save(MAPA_FILE)
+        wb.close()
+        return True, None
+    except PermissionError:
+        return False, "El archivo mapa_preventivos.xlsx está abierto en otro programa. Por favor, ciérralo antes de continuar."
+    except Exception as e:
+        return False, f"Error al gestionar el archivo mapa_preventivos.xlsx: {str(e)}"
+
+def guardar_configuracion_mapa(tipo_preventivo, configuraciones, info_especial):
+    """
+    Guarda las configuraciones en el archivo mapa_preventivos.xlsx.
+    configuraciones es una lista de diccionarios con:
+    - pregunta
+    - coord_celda
+    - coord_respuesta
+    - hoja
+    - config (ignorar, defecto, equipo, lista)
+    - valor
+    info_especial contiene información de ELEMENTO y HOJA VALIDADA
+    """
+    try:
+        wb = openpyxl.load_workbook(MAPA_FILE)
+        ws = wb[tipo_preventivo]
+        
+        # Limpiar datos existentes (mantener encabezados)
+        for row in range(2, ws.max_row + 1):
+            for col in range(1, ws.max_column + 1):
+                ws.cell(row=row, column=col, value=None)
+        
+        fila = 2
+        
+        # Primero agregar información especial (ELEMENTO y HOJA VALIDADA)
+        if info_especial and info_especial.get('elemento'):
+            elem = info_especial['elemento']
+            ws.cell(row=fila, column=1, value=elem['texto'])
+            ws.cell(row=fila, column=2, value=elem['coord'])
+            ws.cell(row=fila, column=3, value=elem['coord_derecha'])
+            ws.cell(row=fila, column=4, value='Maestra')
+            ws.cell(row=fila, column=5, value='INFO')
+            ws.cell(row=fila, column=6, value='')  # No guardar valor
+            fila += 1
+        
+        if info_especial and info_especial.get('hoja_validada'):
+            for hv in info_especial['hoja_validada']:
+                ws.cell(row=fila, column=1, value=hv['texto'])
+                ws.cell(row=fila, column=2, value=hv['coord'])
+                ws.cell(row=fila, column=3, value=hv['coord_derecha'])
+                ws.cell(row=fila, column=4, value=hv['hoja'])
+                ws.cell(row=fila, column=5, value='INFO')
+                ws.cell(row=fila, column=6, value='')  # No guardar valor
+                fila += 1
+        
+        # Escribir configuraciones de preguntas
+        for config in configuraciones:
+            ws.cell(row=fila, column=1, value=config['pregunta'])
+            ws.cell(row=fila, column=2, value=config['coord_celda'])
+            ws.cell(row=fila, column=3, value=config['coord_respuesta'])
+            ws.cell(row=fila, column=4, value=config['hoja'])
+            ws.cell(row=fila, column=5, value=config['config'])
+            ws.cell(row=fila, column=6, value=config.get('valor', ''))
+            fila += 1
+        
+        wb.save(MAPA_FILE)
+        wb.close()
+        return True, None
+    except PermissionError:
+        return False, "El archivo mapa_preventivos.xlsx está abierto en otro programa. Por favor, ciérralo antes de continuar."
+    except Exception as e:
+        return False, f"Error al guardar en el archivo mapa_preventivos.xlsx: {str(e)}"
+
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+@app.route('/comparar')
+def comparar():
+    return render_template('comparar.html')
+
+@app.route('/comparar_upload', methods=['POST'])
+def comparar_upload():
+    if 'file_preventivos' not in request.files or 'file_emplazamientos' not in request.files:
+        flash('Debes subir ambos archivos')
+        return redirect(url_for('comparar'))
+    
+    file_preventivos = request.files['file_preventivos']
+    file_emplazamientos = request.files['file_emplazamientos']
+    
+    if file_preventivos.filename == '' or file_emplazamientos.filename == '':
+        flash('Debes subir ambos archivos')
+        return redirect(url_for('comparar'))
+    
+    if file_preventivos and allowed_file(file_preventivos.filename) and file_emplazamientos and allowed_file(file_emplazamientos.filename):
+        filename_preventivos = secure_filename(file_preventivos.filename)
+        filename_emplazamientos = secure_filename(file_emplazamientos.filename)
+        
+        filepath_preventivos = os.path.join(app.config['UPLOAD_FOLDER'], filename_preventivos)
+        filepath_emplazamientos = os.path.join(app.config['UPLOAD_FOLDER'], filename_emplazamientos)
+        
+        file_preventivos.save(filepath_preventivos)
+        file_emplazamientos.save(filepath_emplazamientos)
+        
+        try:
+            # Leer archivos
+            wb_preventivos = openpyxl.load_workbook(filepath_preventivos)
+            wb_emplazamientos = openpyxl.load_workbook(filepath_emplazamientos)
+            
+            # Procesar datos
+            lista_emplazamientos = leer_excel_emplazamientos(wb_emplazamientos)
+            lista_preventivos = leer_excel_preventivos(wb_preventivos)
+            
+            # Buscar coincidencias
+            lista_resultado, lista_multiple = coincidencias(lista_preventivos, lista_emplazamientos)
+            
+            # Cerrar archivos
+            wb_preventivos.close()
+            wb_emplazamientos.close()
+            
+            # Si hay múltiples coincidencias, mostrar página de selección
+            if lista_multiple:
+                # Guardar datos en sesión para usarlos después
+                session['lista_resultado'] = lista_resultado
+                session['lista_multiple'] = lista_multiple
+                
+                # Limpiar archivos temporales
+                os.remove(filepath_preventivos)
+                os.remove(filepath_emplazamientos)
+                
+                return render_template('seleccionar_coincidencias.html', 
+                                     lista_multiple=lista_multiple,
+                                     total_coincidencias=len(lista_resultado),
+                                     total_multiple=len(lista_multiple))
+            
+            # Si no hay múltiples coincidencias, generar CSV directamente
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            csv_filename = f"preventivos_{timestamp}.csv"
+            csv_path = os.path.join(DOWNLOAD_FOLDER, csv_filename)
+            
+            with open(csv_path, mode="w", newline="", encoding="utf-8") as archivo:
+                escritor = csv.writer(archivo)
+                escritor.writerow(["Folder name", "Folder color", "Latitude", "Longitude", "Title", "Description", "Color"])
+                escritor.writerows(lista_resultado)
+            
+            # Limpiar archivos temporales
+            os.remove(filepath_preventivos)
+            os.remove(filepath_emplazamientos)
+            
+            return send_file(csv_path, as_attachment=True, download_name=csv_filename)
+            
+        except Exception as e:
+            # Limpiar archivos temporales en caso de error
+            if os.path.exists(filepath_preventivos):
+                os.remove(filepath_preventivos)
+            if os.path.exists(filepath_emplazamientos):
+                os.remove(filepath_emplazamientos)
+            flash(f'Error al procesar los archivos: {str(e)}')
+            return redirect(url_for('comparar'))
+    
+    flash('Tipo de archivo no permitido. Solo se permiten archivos .xlsx')
+    return redirect(url_for('comparar'))
+
+@app.route('/procesar_selecciones', methods=['POST'])
+def procesar_selecciones():
+    data = request.json
+    selecciones = data.get('selecciones', [])
+    
+    # Recuperar datos de la sesión
+    lista_resultado = session.get('lista_resultado', [])
+    lista_multiple = session.get('lista_multiple', [])
+    
+    # Procesar selecciones del usuario
+    for sel in selecciones:
+        index = sel['index']
+        seleccion = sel['seleccion']
+        
+        if index < len(lista_multiple):
+            item = lista_multiple[index]
+            coincidencia_seleccionada = item['coincidencias'][seleccion]
+            # Remover el último elemento (nombre del emplazamiento) para mantener el formato original
+            coincidencia_formateada = coincidencia_seleccionada[:-1]
+            lista_resultado.append(coincidencia_formateada)
+    
+    # Generar CSV
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    csv_filename = f"preventivos_{timestamp}.csv"
+    csv_path = os.path.join(DOWNLOAD_FOLDER, csv_filename)
+    
+    with open(csv_path, mode="w", newline="", encoding="utf-8") as archivo:
+        escritor = csv.writer(archivo)
+        escritor.writerow(["Folder name", "Folder color", "Latitude", "Longitude", "Title", "Description", "Color"])
+        escritor.writerows(lista_resultado)
+    
+    # Limpiar sesión
+    session.pop('lista_resultado', None)
+    session.pop('lista_multiple', None)
+    
+    return jsonify({
+        'success': True,
+        'download_url': f'/download_csv/{csv_filename}'
+    })
+
+@app.route('/download_csv/<filename>')
+def download_csv(filename):
+    csv_path = os.path.join(DOWNLOAD_FOLDER, filename)
+    return send_file(csv_path, as_attachment=True, download_name=filename)
+
+@app.route('/upload', methods=['POST'])
+def upload_file():
+    if 'file' not in request.files:
+        flash('No se ha seleccionado ningún archivo')
+        return redirect(url_for('index'))
+    
+    file = request.files['file']
+    
+    if file.filename == '':
+        flash('No se ha seleccionado ningún archivo')
+        return redirect(url_for('index'))
+    
+    if file and allowed_file(file.filename):
+        filename = secure_filename(file.filename)
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(filepath)
+        
+        # Validar archivo
+        es_valido, mensaje = validar_archivo_preventivo(filepath)
+        if not es_valido:
+            os.remove(filepath)
+            flash(f'Archivo no válido: {mensaje}')
+            return redirect(url_for('index'))
+        
+        # Analizar archivo
+        celdas_info, error, info_especial = analizar_archivo_excel(filepath)
+        if error:
+            os.remove(filepath)
+            flash(f'Error al analizar el archivo: {error}')
+            return redirect(url_for('index'))
+        
+        # Obtener tipo de preventivo
+        tipo_preventivo = obtener_tipo_preventivo(filename)
+        
+        # Asegurar mapa_preventivos.xlsx
+        exito, error_msg = asegurar_mapa_preventivos(tipo_preventivo)
+        if not exito:
+            os.remove(filepath)
+            flash(error_msg)
+            return redirect(url_for('index'))
+        
+        # Limpiar archivo temporal
+        os.remove(filepath)
+        
+        # Renderizar página de configuración
+        return render_template('configurar.html', 
+                             tipo_preventivo=tipo_preventivo,
+                             celdas_info=celdas_info,
+                             info_especial=info_especial,
+                             filename=filename)
+    
+    flash('Tipo de archivo no permitido. Solo se permiten archivos .xlsx')
+    return redirect(url_for('index'))
+
+@app.route('/guardar_config', methods=['POST'])
+def guardar_config():
+    data = request.json
+    tipo_preventivo = data.get('tipo_preventivo')
+    configuraciones = data.get('configuraciones', [])
+    info_especial = data.get('info_especial', {})
+    
+    exito, error_msg = guardar_configuracion_mapa(tipo_preventivo, configuraciones, info_especial)
+    if exito:
+        return jsonify({'success': True, 'message': 'Configuración guardada correctamente'})
+    else:
+        return jsonify({'success': False, 'message': error_msg})
+
+if __name__ == '__main__':
+    app.run(debug=True)
