@@ -38,12 +38,28 @@
             border-bottom: 2px solid #2196F3;
             padding-bottom: 10px;
         }
+        .equipo-section {
+            margin: 20px 0;
+            border: 2px solid #ff9800;
+            border-radius: 10px;
+            padding: 20px;
+            background-color: #fff3e0;
+        }
+        .equipo-title {
+            color: #ff9800;
+            font-size: 20px;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
         .pregunta-item {
             margin: 15px 0;
             padding: 15px;
             background-color: white;
             border-radius: 5px;
             border-left: 4px solid #4CAF50;
+        }
+        .pregunta-item.equipo-pregunta {
+            border-left-color: #ff9800;
         }
         .pregunta-label {
             font-weight: bold;
@@ -105,6 +121,16 @@
         .btn-secondary:hover {
             background-color: #757575;
         }
+        .btn-add {
+            background-color: #2196F3;
+            color: white;
+            padding: 8px 15px;
+            font-size: 14px;
+            margin-left: 10px;
+        }
+        .btn-add:hover {
+            background-color: #0b7dda;
+        }
         .info-badge {
             display: inline-block;
             padding: 4px 8px;
@@ -121,9 +147,50 @@
             background-color: #2196F3;
             color: white;
         }
+        .badge-equipo {
+            background-color: #9c27b0;
+            color: white;
+        }
         .badge-otro {
             background-color: #9e9e9e;
             color: white;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        .modal-content {
+            background-color: white;
+            margin: 10% auto;
+            padding: 30px;
+            border-radius: 10px;
+            width: 80%;
+            max-width: 600px;
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .modal-header h2 {
+            margin: 0;
+            color: #333;
+        }
+        .close {
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            color: #666;
+        }
+        .close:hover {
+            color: #000;
         }
     </style>
 </head>
@@ -131,56 +198,81 @@
     <div class="container">
         <h1>📝 {{ title }}</h1>
         
-        {% if not preguntas_por_tipo %}
+        {% if not preguntas_por_tipo and not equipos_por_tipo %}
         <p style="text-align: center; color: #666;">No se encontraron tipos de preventivos válidos o no hay preguntas configuradas.</p>
         {% endif %}
         
         <form id="rellenarForm">
-            {% for tipo, preguntas in preguntas_por_tipo.items() %}
+            {% for tipo, items in items_por_tipo.items() %}
             <div class="tipo-section">
                 <h2 class="tipo-title">Tipo: {{ tipo }}</h2>
                 
-                {% for pregunta in preguntas %}
-                <div class="pregunta-item">
+                {% for item in items %}
+                {% if item.tipo == 'equipo_selector' %}
+                <!-- Sección de equipo -->
+                <div class="equipo-section" data-equipo="{{ item.nombre_equipo }}">
+                    <div class="equipo-title">
+                        {{ item.nombre_equipo }}
+                        <button type="button" class="btn btn-add" onclick="abrirModalNuevoEquipo('{{ item.nombre_equipo }}')">+ Nuevo Equipo</button>
+                    </div>
+                    
+                    <!-- Desplegable para seleccionar equipo -->
+                    <div class="pregunta-item">
+                        <label class="pregunta-label">Seleccionar Equipo</label>
+                        <select class="campo-select equipo-select" id="equipo_select_{{ item.nombre_equipo }}" onchange="seleccionarEquipo(this, '{{ item.nombre_equipo }}')">
+                            <option value="">Seleccione un equipo...</option>
+                            {% for equipo in equipos_por_tipo[item.nombre_equipo].equipos_disponibles %}
+                            <option value="{{ loop.index0 }}" data-valores="{{ equipo }}">
+                                {{ equipo[0] if equipo else 'Sin nombre' }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                {% elif item.tipo == 'pregunta' %}
+                <div class="pregunta-item {% if item.data.es_equipo %}equipo-pregunta{% endif %}" {% if item.data.es_equipo %}data-campo="{{ item.data.valor }}"{% endif %}>
                     <label class="pregunta-label">
-                        {{ pregunta.pregunta }}
-                        {% if pregunta.config %}
-                        <span class="info-badge badge-{{ 'rellenar' if pregunta.config.lower() == 'rellenar' else 'lista' if pregunta.config.lower() == 'lista' else 'otro' }}">
-                            {{ pregunta.config }}
+                        {{ item.data.pregunta }}
+                        {% if item.data.config %}
+                        <span class="info-badge badge-{{ 'rellenar' if item.data.config.lower() == 'rellenar' else 'lista' if item.data.config.lower() == 'lista' else 'equipo' if item.data.config.lower().startswith('equipo') else 'otro' }}">
+                            {{ item.data.config }}
                         </span>
                         {% endif %}
                     </label>
                     
-                    {% if pregunta.config and pregunta.config.lower() == 'rellenar' %}
-                        {% if pregunta.valor and pregunta.valor.lower() == 'numero' %}
+                    {% if item.data.config and item.data.config.lower() == 'rellenar' %}
+                        {% if item.data.valor and item.data.valor.lower() == 'numero' %}
                         <input type="number" class="campo-input" name="{{ tipo }}_{{ loop.index0 }}" placeholder="Ingrese un número">
-                        {% elif pregunta.valor and pregunta.valor.lower() == 'fecha' %}
+                        {% elif item.data.valor and item.data.valor.lower() == 'fecha' %}
                         <input type="date" class="campo-input" name="{{ tipo }}_{{ loop.index0 }}">
-                        {% elif pregunta.valor and pregunta.valor.lower() == 'texto' %}
+                        {% elif item.data.valor and item.data.valor.lower() == 'texto' %}
                         <input type="text" class="campo-input" name="{{ tipo }}_{{ loop.index0 }}" placeholder="Ingrese texto">
                         {% else %}
                         <input type="text" class="campo-input" name="{{ tipo }}_{{ loop.index0 }}" placeholder="Ingrese valor">
                         {% endif %}
-                    {% elif pregunta.config and pregunta.config.lower() == 'lista' %}
-                        {% if pregunta.lista_valores %}
+                    {% elif item.data.config and item.data.config.lower() == 'lista' %}
+                        {% if item.data.lista_valores %}
                         <select class="campo-select" name="{{ tipo }}_{{ loop.index0 }}">
                             <option value="">Seleccione una opción...</option>
-                            {% for valor in pregunta.lista_valores %}
+                            {% for valor in item.data.lista_valores %}
                             <option value="{{ valor }}">{{ valor }}</option>
                             {% endfor %}
                         </select>
                         {% else %}
                         <input type="text" class="campo-input" name="{{ tipo }}_{{ loop.index0 }}" placeholder="No hay valores en la lista" disabled>
                         {% endif %}
+                    {% elif item.data.es_equipo %}
+                        <input type="text" class="campo-input equipo-input" name="equipo_{{ item.data.nombre_equipo }}_{{ loop.index0 }}" placeholder="Se rellenará automáticamente al seleccionar equipo" readonly>
                     {% else %}
                         <input type="text" class="campo-input" name="{{ tipo }}_{{ loop.index0 }}" placeholder="Ingrese valor" disabled>
                     {% endif %}
                 </div>
+                {% endif %}
                 {% endfor %}
             </div>
             {% endfor %}
             
-            {% if preguntas_por_tipo %}
+            {% if items_por_tipo %}
             <div class="buttons-container">
                 <button type="button" class="btn btn-secondary" onclick="window.history.back()">Cancelar</button>
                 <button type="submit" class="btn btn-primary">💾 Guardar Respuestas</button>
@@ -189,7 +281,151 @@
         </form>
     </div>
     
+    <!-- Modal para agregar nuevo equipo -->
+    <div id="modalNuevoEquipo" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Agregar Nuevo Equipo</h2>
+                <span class="close" onclick="cerrarModalNuevoEquipo()">&times;</span>
+            </div>
+            <div id="modalFormContainer">
+                <!-- El formulario se generará dinámicamente -->
+            </div>
+            <div class="buttons-container">
+                <button type="button" class="btn btn-secondary" onclick="cerrarModalNuevoEquipo()">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="guardarNuevoEquipo()">Guardar</button>
+            </div>
+        </div>
+    </div>
+    
     <script>
+        const equiposPorTipo = {{ equipos_por_tipo | tojson if equipos_por_tipo else '{}' }};
+        console.log('equiposPorTipo:', equiposPorTipo);
+        let equipoActual = null;
+        
+        function seleccionarEquipo(select, nombreEquipo) {
+            const equipoInfo = equiposPorTipo[nombreEquipo];
+            const selectedIndex = select.value;
+            
+            if (selectedIndex === '') {
+                // Limpiar campos
+                document.querySelectorAll(`[data-equipo="${nombreEquipo}"] .equipo-input`).forEach(input => {
+                    input.value = '';
+                });
+                return;
+            }
+            
+            const equipoSeleccionado = equipoInfo.equipos_disponibles[selectedIndex];
+            const titulos = equipoInfo.titulos;
+            
+            // Rellenar campos automáticamente
+            equipoInfo.preguntas.forEach((pregunta, index) => {
+                const campo = pregunta.valor;
+                const input = document.querySelector(`[data-equipo="${nombreEquipo}"] [data-campo="${campo}"]`);
+                if (input && campo) {
+                    // Buscar el índice del campo en los títulos
+                    const campoIndex = titulos.indexOf(campo);
+                    if (campoIndex !== -1 && campoIndex < equipoSeleccionado.length) {
+                        input.value = equipoSeleccionado[campoIndex] || '';
+                    }
+                }
+            });
+        }
+        
+        function abrirModalNuevoEquipo(nombreEquipo) {
+            console.log('abrirModalNuevoEquipo llamado con:', nombreEquipo);
+            equipoActual = nombreEquipo;
+            const equipoInfo = equiposPorTipo[nombreEquipo];
+            
+            console.log('equiposPorTipo completo:', equiposPorTipo);
+            console.log('equipoInfo:', equipoInfo);
+            
+            if (!equipoInfo) {
+                alert('No se encontró información del equipo: ' + nombreEquipo + '\nEquipos disponibles: ' + Object.keys(equiposPorTipo).join(', '));
+                return;
+            }
+            
+            const titulos = equipoInfo.titulos;
+            console.log('titulos:', titulos);
+            
+            if (!titulos || titulos.length === 0) {
+                alert('No se encontraron títulos de columnas para el equipo: ' + nombreEquipo);
+                return;
+            }
+            
+            let html = '<form id="nuevoEquipoForm">';
+            for (const titulo of titulos) {
+                html += `
+                    <div style="margin: 15px 0;">
+                        <label style="display: block; margin-bottom: 5px; font-weight: bold;">${titulo}:</label>
+                        <input type="text" class="campo-input" name="${titulo}" placeholder="Ingrese ${titulo}">
+                    </div>
+                `;
+            }
+            html += '</form>';
+            
+            console.log('HTML generado:', html);
+            document.getElementById('modalFormContainer').innerHTML = html;
+            const modal = document.getElementById('modalNuevoEquipo');
+            console.log('modal:', modal);
+            modal.style.display = 'block';
+            console.log('Modal display:', modal.style.display);
+        }
+        
+        function cerrarModalNuevoEquipo() {
+            document.getElementById('modalNuevoEquipo').style.display = 'none';
+            equipoActual = null;
+        }
+        
+        function guardarNuevoEquipo() {
+            const form = document.getElementById('nuevoEquipoForm');
+            const formData = new FormData(form);
+            const nuevoEquipo = [];
+            
+            for (const value of formData.values()) {
+                nuevoEquipo.push(value);
+            }
+            
+            // Enviar al servidor para guardar en el Excel
+            fetch('/guardar_equipo', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    nombre_equipo: equipoActual,
+                    datos_equipo: nuevoEquipo
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Equipo guardado correctamente');
+                    cerrarModalNuevoEquipo();
+                    
+                    // Agregar el nuevo equipo al desplegable dinámicamente
+                    const select = document.getElementById(`equipo_select_${equipoActual}`);
+                    if (select) {
+                        const newIndex = select.options.length;
+                        const option = document.createElement('option');
+                        option.value = newIndex;
+                        option.textContent = nuevoEquipo[0] || 'Sin nombre';
+                        option.setAttribute('data-valores', JSON.stringify(nuevoEquipo));
+                        select.appendChild(option);
+                        select.value = newIndex;
+                        
+                        // Disparar el evento onchange para rellenar las preguntas
+                        select.dispatchEvent(new Event('change'));
+                    }
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                alert('Error al guardar el equipo: ' + error);
+            });
+        }
+        
         document.getElementById('rellenarForm').addEventListener('submit', function(e) {
             e.preventDefault();
             
@@ -203,6 +439,14 @@
             console.log('Respuestas:', respuestas);
             alert('Respuestas guardadas (funcionalidad de guardado pendiente de implementación)');
         });
+        
+        // Cerrar modal al hacer clic fuera
+        window.onclick = function(event) {
+            const modal = document.getElementById('modalNuevoEquipo');
+            if (event.target == modal) {
+                cerrarModalNuevoEquipo();
+            }
+        }
     </script>
 </body>
 </html>

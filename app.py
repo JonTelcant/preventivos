@@ -530,11 +530,15 @@ def rellenar():
         return redirect(url_for('index'))
     
     # Para cada tipo, buscar la hoja correspondiente y leer las preguntas
-    preguntas_por_tipo = {}
+    items_por_tipo = {}  # Para mantener el orden original
+    equipos_por_tipo = {}  # Para guardar información de equipos por tipo
+    
     for tipo in tipos:
         if tipo in wb.sheetnames:
             hoja = wb[tipo]
-            preguntas = []
+            items = []  # Para mantener el orden original
+            equipos_info = {}  # Para agrupar preguntas por equipo
+            equipos_procesados = set()  # Para evitar duplicados
             
             # Leer filas desde la fila 2 (asumiendo que la fila 1 es el encabezado)
             for fila in hoja.iter_rows(min_row=2, values_only=True):
@@ -543,31 +547,97 @@ def rellenar():
                     config = fila[4] if len(fila) > 4 else None  # Columna E
                     valor = fila[5] if len(fila) > 5 else None  # Columna F
                     
-                    # Solo incluir preguntas con configuración 'lista' o 'rellenar'
-                    if config and config.lower() in ['lista', 'rellenar']:
+                    # Detectar si es una configuración de equipo
+                    es_equipo = False
+                    nombre_equipo = None
+                    if config and config.lower().startswith('equipo'):
+                        es_equipo = True
+                        nombre_equipo = config
+                    
+                    # Solo incluir preguntas con configuración 'lista', 'rellenar' o 'equipoXX'
+                    if config and (config.lower() in ['lista', 'rellenar'] or es_equipo):
                         # Si la configuración es 'lista', leer las siguientes columnas hasta encontrar una vacía
                         lista_valores = []
-                        if config.lower() == 'lista':
+                        if config and config.lower() == 'lista':
                             col_index = 5  # Empezar desde la columna F
                             while col_index < len(fila) and fila[col_index]:
                                 lista_valores.append(fila[col_index])
                                 col_index += 1
                         
-                        preguntas.append({
+                        pregunta_info = {
                             'pregunta': pregunta,
                             'config': config,
                             'valor': valor,
-                            'lista_valores': lista_valores
-                        })
+                            'lista_valores': lista_valores,
+                            'es_equipo': es_equipo,
+                            'nombre_equipo': nombre_equipo
+                        }
+                        
+                        # Si es equipo, agrupar por nombre de equipo
+                        if es_equipo:
+                            if nombre_equipo not in equipos_info:
+                                equipos_info[nombre_equipo] = []
+                            equipos_info[nombre_equipo].append(pregunta_info)
+                            
+                            # Si es la primera vez que encontramos este equipo, agregar el desplegable
+                            if nombre_equipo not in equipos_procesados:
+                                items.append({
+                                    'tipo': 'equipo_selector',
+                                    'nombre_equipo': nombre_equipo
+                                })
+                                equipos_procesados.add(nombre_equipo)
+                            
+                            # Agregar la pregunta
+                            items.append({
+                                'tipo': 'pregunta',
+                                'data': pregunta_info
+                            })
+                        else:
+                            items.append({
+                                'tipo': 'pregunta',
+                                'data': pregunta_info
+                            })
             
-            preguntas_por_tipo[tipo] = preguntas
+            # Para cada equipo, leer la hoja correspondiente y obtener los equipos disponibles
+            for nombre_equipo, preguntas_equipo in equipos_info.items():
+                if nombre_equipo in wb.sheetnames:
+                    hoja_equipo = wb[nombre_equipo]
+                    equipos_disponibles = []
+                    
+                    # Leer filas desde la fila 2 (la fila 1 son los títulos)
+                    for fila in hoja_equipo.iter_rows(min_row=2, values_only=True):
+                        if fila[0]:  # Si hay datos en la primera columna
+                            equipos_disponibles.append(fila)
+                    
+                    # Obtener los títulos de las columnas (fila 1)
+                    titulos = []
+                    fila_titulos = list(hoja_equipo.iter_rows(min_row=1, max_row=1, values_only=True))
+                    if fila_titulos:
+                        for titulo in fila_titulos[0]:
+                            if titulo:
+                                titulos.append(str(titulo))
+                    
+                    # Si no hay títulos, usar los valores de la columna F de las preguntas como títulos
+                    if not titulos:
+                        for pregunta in preguntas_equipo:
+                            if pregunta['valor']:
+                                titulos.append(str(pregunta['valor']))
+                    
+                    equipos_por_tipo[nombre_equipo] = {
+                        'preguntas': preguntas_equipo,
+                        'equipos_disponibles': equipos_disponibles,
+                        'titulos': titulos
+                    }
+            
+            items_por_tipo[tipo] = items
     
     wb.close()
     
     return render_template('rellenar.html', 
                          title=title,
                          tipos=tipos,
-                         preguntas_por_tipo=preguntas_por_tipo)
+                         items_por_tipo=items_por_tipo,
+                         equipos_por_tipo=equipos_por_tipo)
 
 @app.route('/comparar')
 def comparar():
@@ -699,6 +769,53 @@ def procesar_selecciones():
 def download_csv(filename):
     csv_path = os.path.join(DOWNLOAD_FOLDER, filename)
     return send_file(csv_path, as_attachment=True, download_name=filename)
+
+@app.route('/guardar_equipo', methods=['POST'])
+def guardar_equipo():
+    """Guarda un nuevo equipo en la hoja correspondiente del Excel."""
+    data = request.json
+    nombre_equipo = data.get('nombre_equipo')
+    datos_equipo = data.get('datos_equipo', [])
+    
+    if not nombre_equipo or not datos_equipo:
+        return jsonify({'success': False, 'message': 'Faltan datos del equipo'})
+    
+    try:
+        # Abrir el archivo Excel
+        wb = openpyxl.load_workbook(MAPA_FILE)
+        
+        # Verificar si existe la hoja del equipo
+        if nombre_equipo not in wb.sheetnames:
+            wb.close()
+            return jsonify({'success': False, 'message': f'No existe la hoja {nombre_equipo}'})
+        
+        hoja = wb[nombre_equipo]
+        
+        # Encontrar la primera fila vacía
+        fila_vacia = None
+        for fila in hoja.iter_rows(min_row=2):
+            if not fila[0].value:  # Si la primera celda está vacía
+                fila_vacia = fila[0].row
+                break
+        
+        # Si no hay fila vacía, agregar al final
+        if fila_vacia is None:
+            fila_vacia = hoja.max_row + 1
+        
+        # Escribir los datos del equipo
+        for col_index, valor in enumerate(datos_equipo):
+            hoja.cell(row=fila_vacia, column=col_index + 1, value=valor)
+        
+        # Guardar el Excel
+        wb.save(MAPA_FILE)
+        wb.close()
+        
+        return jsonify({'success': True, 'message': 'Equipo guardado correctamente'})
+        
+    except PermissionError:
+        return jsonify({'success': False, 'message': 'El archivo mapa_preventivos.xlsx está abierto en otro programa. Por favor, ciérralo antes de continuar.'})
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Error al guardar el equipo: {str(e)}'})
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
