@@ -447,11 +447,19 @@
                 const campo = pregunta.valor;
                 console.log(`Procesando campo: ${campo}, valor en pregunta.valor: ${pregunta.valor}`);
                 
-                // Buscar el div con data-campo (está fuera de la sección data-equipo)
-                const divPadre = document.querySelector(`[data-campo="${campo}"]`);
-                const input = divPadre ? divPadre.querySelector('.equipo-input') : null;
+                // Buscar todos los divs con data-campo y filtrar por el nombre del equipo
+                const allDivs = document.querySelectorAll(`[data-campo="${campo}"]`);
+                let input = null;
                 
-                console.log(`Campo: ${campo}, divPadre encontrado: ${!!divPadre}, input encontrado: ${!!input}`);
+                for (const div of allDivs) {
+                    const tempInput = div.querySelector('.equipo-input');
+                    if (tempInput && tempInput.name.includes(`equipo_${nombreEquipo}_`)) {
+                        input = tempInput;
+                        break;
+                    }
+                }
+                
+                console.log(`Campo: ${campo}, input encontrado: ${!!input}, input.name: ${input ? input.name : 'N/A'}`);
                 
                 if (input && campo) {
                     // Buscar el índice del campo en los títulos
@@ -460,11 +468,10 @@
                     
                     if (campoIndex !== -1 && campoIndex < equipoSeleccionado.length) {
                         const valor = equipoSeleccionado[campoIndex] || '';
-                        // Para inputs readonly, asegurar que el valor se actualice
-                        input.removeAttribute('readonly');
+                        // Para inputs readonly, usar setAttribute para asegurar que el valor se actualice
+                        input.setAttribute('value', valor);
                         input.value = valor;
-                        input.setAttribute('readonly', 'readonly');
-                        console.log(`Rellenando input con valor: ${valor}`);
+                        console.log(`Rellenando input con valor: ${valor}, input.value después: ${input.value}`);
                     } else {
                         console.log(`No se pudo rellenar: campoIndex=${campoIndex}, equipoSeleccionado.length=${equipoSeleccionado.length}`);
                     }
