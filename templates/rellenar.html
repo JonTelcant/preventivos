@@ -550,7 +550,8 @@
                     // Agregar el nuevo equipo al desplegable dinámicamente
                     const select = document.getElementById(`equipo_select_${equipoActual}`);
                     if (select) {
-                        const newIndex = select.options.length;
+                        // El índice correcto es el último del array (length - 1)
+                        const newIndex = equiposPorTipo[equipoActual].equipos_disponibles.length - 1;
                         const option = document.createElement('option');
                         option.value = newIndex;
                         option.textContent = nuevoEquipo[0] || 'Sin nombre';
