@@ -423,10 +423,11 @@
         let equipoActual = null;
         
         function seleccionarEquipo(select, nombreEquipo) {
+            console.log('seleccionarEquipo llamado:', nombreEquipo, 'selectedIndex:', select.value);
             const equipoInfo = equiposPorTipo[nombreEquipo];
-            const selectedIndex = select.value;
+            const selectedIndex = parseInt(select.value);
             
-            if (selectedIndex === '') {
+            if (isNaN(selectedIndex) || selectedIndex === '') {
                 // Limpiar campos
                 document.querySelectorAll(`[data-equipo="${nombreEquipo}"] .equipo-input`).forEach(input => {
                     input.value = '';
@@ -437,17 +438,35 @@
             const equipoSeleccionado = equipoInfo.equipos_disponibles[selectedIndex];
             const titulos = equipoInfo.titulos;
             
+            console.log('equipoSeleccionado:', equipoSeleccionado);
+            console.log('titulos:', titulos);
+            console.log('preguntas:', equipoInfo.preguntas);
+            
             // Rellenar campos automáticamente
             equipoInfo.preguntas.forEach((pregunta, index) => {
                 const campo = pregunta.valor;
-                // Buscar el div con data-campo y luego el input dentro
-                const divPadre = document.querySelector(`[data-equipo="${nombreEquipo}"] [data-campo="${campo}"]`);
-                const input = divPadre ? divPadre.querySelector('.equipo-input') : null;
-                if (input && campo) {
-                    // Buscar el índice del campo en los títulos
-                    const campoIndex = titulos.indexOf(campo);
-                    if (campoIndex !== -1 && campoIndex < equipoSeleccionado.length) {
-                        input.value = equipoSeleccionado[campoIndex] || '';
+                console.log(`Procesando campo: ${campo}, valor en pregunta.valor: ${pregunta.valor}`);
+                
+                // Buscar el div con data-campo dentro de la sección del equipo
+                const equipoSection = document.querySelector(`[data-equipo="${nombreEquipo}"]`);
+                if (equipoSection) {
+                    const divPadre = equipoSection.querySelector(`[data-campo="${campo}"]`);
+                    const input = divPadre ? divPadre.querySelector('.equipo-input') : null;
+                    
+                    console.log(`Campo: ${campo}, divPadre encontrado: ${!!divPadre}, input encontrado: ${!!input}`);
+                    
+                    if (input && campo) {
+                        // Buscar el índice del campo en los títulos
+                        const campoIndex = titulos.indexOf(campo);
+                        console.log(`Índice de campo "${campo}" en títulos: ${campoIndex}`);
+                        
+                        if (campoIndex !== -1 && campoIndex < equipoSeleccionado.length) {
+                            const valor = equipoSeleccionado[campoIndex] || '';
+                            input.value = valor;
+                            console.log(`Rellenando input con valor: ${valor}`);
+                        } else {
+                            console.log(`No se pudo rellenar: campoIndex=${campoIndex}, equipoSeleccionado.length=${equipoSeleccionado.length}`);
+                        }
                     }
                 }
             });
@@ -524,9 +543,14 @@
                     alert('Equipo guardado correctamente');
                     cerrarModalNuevoEquipo();
                     
+                    console.log('Agregando nuevo equipo a equiposPorTipo');
+                    console.log('equipoActual:', equipoActual);
+                    console.log('nuevoEquipo:', nuevoEquipo);
+                    
                     // Agregar el nuevo equipo al objeto equiposPorTipo
                     if (equiposPorTipo[equipoActual]) {
                         equiposPorTipo[equipoActual].equipos_disponibles.push(nuevoEquipo);
+                        console.log('Equipo agregado. Total equipos:', equiposPorTipo[equipoActual].equipos_disponibles.length);
                     }
                     
                     // Agregar el nuevo equipo al desplegable dinámicamente
@@ -539,6 +563,8 @@
                         option.setAttribute('data-valores', JSON.stringify(nuevoEquipo));
                         select.appendChild(option);
                         select.value = newIndex;
+                        
+                        console.log('Opción agregada al select. Nuevo índice:', newIndex);
                         
                         // Disparar el evento onchange para rellenar las preguntas
                         select.dispatchEvent(new Event('change'));
