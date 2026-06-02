@@ -429,7 +429,7 @@
             
             if (isNaN(selectedIndex) || selectedIndex === '') {
                 // Limpiar campos
-                document.querySelectorAll(`[data-equipo="${nombreEquipo}"] .equipo-input`).forEach(input => {
+                document.querySelectorAll(`[data-campo] .equipo-input`).forEach(input => {
                     input.value = '';
                 });
                 return;
@@ -447,26 +447,23 @@
                 const campo = pregunta.valor;
                 console.log(`Procesando campo: ${campo}, valor en pregunta.valor: ${pregunta.valor}`);
                 
-                // Buscar el div con data-campo dentro de la sección del equipo
-                const equipoSection = document.querySelector(`[data-equipo="${nombreEquipo}"]`);
-                if (equipoSection) {
-                    const divPadre = equipoSection.querySelector(`[data-campo="${campo}"]`);
-                    const input = divPadre ? divPadre.querySelector('.equipo-input') : null;
+                // Buscar el div con data-campo (está fuera de la sección data-equipo)
+                const divPadre = document.querySelector(`[data-campo="${campo}"]`);
+                const input = divPadre ? divPadre.querySelector('.equipo-input') : null;
+                
+                console.log(`Campo: ${campo}, divPadre encontrado: ${!!divPadre}, input encontrado: ${!!input}`);
+                
+                if (input && campo) {
+                    // Buscar el índice del campo en los títulos
+                    const campoIndex = titulos.indexOf(campo);
+                    console.log(`Índice de campo "${campo}" en títulos: ${campoIndex}`);
                     
-                    console.log(`Campo: ${campo}, divPadre encontrado: ${!!divPadre}, input encontrado: ${!!input}`);
-                    
-                    if (input && campo) {
-                        // Buscar el índice del campo en los títulos
-                        const campoIndex = titulos.indexOf(campo);
-                        console.log(`Índice de campo "${campo}" en títulos: ${campoIndex}`);
-                        
-                        if (campoIndex !== -1 && campoIndex < equipoSeleccionado.length) {
-                            const valor = equipoSeleccionado[campoIndex] || '';
-                            input.value = valor;
-                            console.log(`Rellenando input con valor: ${valor}`);
-                        } else {
-                            console.log(`No se pudo rellenar: campoIndex=${campoIndex}, equipoSeleccionado.length=${equipoSeleccionado.length}`);
-                        }
+                    if (campoIndex !== -1 && campoIndex < equipoSeleccionado.length) {
+                        const valor = equipoSeleccionado[campoIndex] || '';
+                        input.value = valor;
+                        console.log(`Rellenando input con valor: ${valor}`);
+                    } else {
+                        console.log(`No se pudo rellenar: campoIndex=${campoIndex}, equipoSeleccionado.length=${equipoSeleccionado.length}`);
                     }
                 }
             });
@@ -540,9 +537,6 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    alert('Equipo guardado correctamente');
-                    cerrarModalNuevoEquipo();
-                    
                     console.log('Agregando nuevo equipo a equiposPorTipo');
                     console.log('equipoActual:', equipoActual);
                     console.log('nuevoEquipo:', nuevoEquipo);
@@ -569,6 +563,9 @@
                         // Disparar el evento onchange para rellenar las preguntas
                         select.dispatchEvent(new Event('change'));
                     }
+                    
+                    alert('Equipo guardado correctamente');
+                    cerrarModalNuevoEquipo();
                 } else {
                     alert('Error: ' + data.message);
                 }
