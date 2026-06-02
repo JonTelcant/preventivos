@@ -158,6 +158,95 @@
             margin: 20px 0;
             border-left: 4px solid #c62828;
         }
+        
+        /* Media queries para dispositivos móviles */
+        @media (max-width: 768px) {
+            body {
+                margin: 10px auto;
+                padding: 10px;
+            }
+            .container {
+                padding: 15px;
+                border-radius: 8px;
+            }
+            h1 {
+                font-size: 22px;
+                margin-bottom: 10px;
+            }
+            .subtitle {
+                font-size: 14px;
+            }
+            .info-bar {
+                padding: 12px;
+                font-size: 14px;
+            }
+            .info-bar ul {
+                padding-left: 20px;
+            }
+            .info-bar li {
+                margin: 6px 0;
+            }
+            .info-bar div[style*="grid"] {
+                grid-template-columns: 1fr !important;
+                gap: 10px !important;
+            }
+            table {
+                font-size: 12px;
+            }
+            th, td {
+                padding: 8px 4px;
+            }
+            .config-select,
+            .valor-input,
+            .lista-select {
+                font-size: 14px;
+                padding: 6px;
+            }
+            .btn {
+                padding: 12px 20px;
+                font-size: 14px;
+                margin: 5px;
+            }
+            .buttons-container {
+                flex-direction: column;
+                gap: 10px;
+            }
+            .buttons-container .btn {
+                width: 100%;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            body {
+                margin: 5px auto;
+                padding: 5px;
+            }
+            .container {
+                padding: 10px;
+            }
+            h1 {
+                font-size: 18px;
+            }
+            .subtitle {
+                font-size: 12px;
+            }
+            table {
+                font-size: 11px;
+            }
+            th, td {
+                padding: 6px 2px;
+            }
+            .config-select,
+            .valor-input,
+            .lista-select {
+                font-size: 12px;
+                padding: 5px;
+            }
+            .btn {
+                padding: 10px 15px;
+                font-size: 13px;
+            }
+        }
     </style>
 </head>
 <body>

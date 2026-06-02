@@ -116,6 +116,102 @@
         .back-button:hover {
             background-color: #757575;
         }
+        
+        /* Media queries para dispositivos móviles */
+        @media (max-width: 768px) {
+            body {
+                margin: 10px auto;
+                padding: 10px;
+            }
+            .container {
+                padding: 15px;
+                border-radius: 8px;
+            }
+            h1 {
+                font-size: 22px;
+                margin-bottom: 15px;
+            }
+            .summary {
+                padding: 12px;
+                font-size: 14px;
+            }
+            .summary ul {
+                padding-left: 20px;
+            }
+            .summary li {
+                margin: 6px 0;
+            }
+            .coincidencia-item {
+                padding: 15px;
+                margin: 15px 0;
+            }
+            .coincidencia-item h3 {
+                font-size: 16px;
+            }
+            .opcion-coincidencia {
+                padding: 12px;
+                margin: 8px 0;
+            }
+            .info-coincidencia {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+            }
+            .coordenadas {
+                font-size: 12px;
+            }
+            .btn {
+                padding: 12px 20px;
+                font-size: 14px;
+                margin: 5px;
+            }
+            .buttons-container {
+                flex-direction: column;
+                gap: 10px;
+            }
+            .buttons-container .btn {
+                width: 100%;
+            }
+            .back-button {
+                width: 100%;
+                margin-bottom: 15px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            body {
+                margin: 5px auto;
+                padding: 5px;
+            }
+            .container {
+                padding: 10px;
+            }
+            h1 {
+                font-size: 18px;
+            }
+            .summary {
+                padding: 10px;
+                font-size: 13px;
+            }
+            .coincidencia-item {
+                padding: 12px;
+                margin: 12px 0;
+            }
+            .coincidencia-item h3 {
+                font-size: 14px;
+            }
+            .opcion-coincidencia {
+                padding: 10px;
+                margin: 6px 0;
+            }
+            .opcion-coincidencia input[type="radio"] {
+                margin-right: 8px;
+            }
+            .btn {
+                padding: 10px 15px;
+                font-size: 13px;
+            }
+        }
     </style>
 </head>
 <body>

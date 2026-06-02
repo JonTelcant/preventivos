@@ -192,6 +192,125 @@
         .close:hover {
             color: #000;
         }
+        
+        /* Media queries para dispositivos móviles */
+        @media (max-width: 768px) {
+            body {
+                margin: 10px auto;
+                padding: 10px;
+            }
+            .container {
+                padding: 15px;
+                border-radius: 8px;
+            }
+            h1 {
+                font-size: 24px;
+                margin-bottom: 20px;
+            }
+            .tipo-section {
+                margin: 20px 0;
+                padding: 15px;
+            }
+            .tipo-title {
+                font-size: 20px;
+            }
+            .equipo-section {
+                margin: 15px 0;
+                padding: 15px;
+            }
+            .equipo-title {
+                font-size: 16px;
+            }
+            .btn-add {
+                padding: 6px 12px;
+                font-size: 12px;
+                margin-left: 5px;
+            }
+            .pregunta-item {
+                margin: 10px 0;
+                padding: 12px;
+            }
+            .pregunta-label {
+                font-size: 14px;
+            }
+            .campo-input,
+            .campo-select {
+                font-size: 14px;
+                padding: 8px;
+            }
+            .btn {
+                padding: 12px 20px;
+                font-size: 14px;
+                margin: 5px;
+            }
+            .buttons-container {
+                flex-direction: column;
+                gap: 10px;
+            }
+            .buttons-container .btn {
+                width: 100%;
+            }
+            .modal-content {
+                width: 95%;
+                margin: 5% auto;
+                padding: 20px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            body {
+                margin: 5px auto;
+                padding: 5px;
+            }
+            .container {
+                padding: 10px;
+            }
+            h1 {
+                font-size: 20px;
+            }
+            .tipo-section {
+                margin: 15px 0;
+                padding: 12px;
+            }
+            .tipo-title {
+                font-size: 18px;
+            }
+            .equipo-section {
+                margin: 10px 0;
+                padding: 12px;
+            }
+            .equipo-title {
+                font-size: 14px;
+            }
+            .btn-add {
+                padding: 5px 10px;
+                font-size: 11px;
+            }
+            .pregunta-item {
+                margin: 8px 0;
+                padding: 10px;
+            }
+            .pregunta-label {
+                font-size: 13px;
+            }
+            .campo-input,
+            .campo-select {
+                font-size: 13px;
+                padding: 6px;
+            }
+            .btn {
+                padding: 10px 15px;
+                font-size: 13px;
+            }
+            .modal-content {
+                width: 98%;
+                margin: 2% auto;
+                padding: 15px;
+            }
+            .modal-header h2 {
+                font-size: 18px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -321,7 +440,9 @@
             // Rellenar campos automáticamente
             equipoInfo.preguntas.forEach((pregunta, index) => {
                 const campo = pregunta.valor;
-                const input = document.querySelector(`[data-equipo="${nombreEquipo}"] [data-campo="${campo}"]`);
+                // Buscar el div con data-campo y luego el input dentro
+                const divPadre = document.querySelector(`[data-equipo="${nombreEquipo}"] [data-campo="${campo}"]`);
+                const input = divPadre ? divPadre.querySelector('.equipo-input') : null;
                 if (input && campo) {
                     // Buscar el índice del campo en los títulos
                     const campoIndex = titulos.indexOf(campo);
@@ -402,6 +523,11 @@
                 if (data.success) {
                     alert('Equipo guardado correctamente');
                     cerrarModalNuevoEquipo();
+                    
+                    // Agregar el nuevo equipo al objeto equiposPorTipo
+                    if (equiposPorTipo[equipoActual]) {
+                        equiposPorTipo[equipoActual].equipos_disponibles.push(nuevoEquipo);
+                    }
                     
                     // Agregar el nuevo equipo al desplegable dinámicamente
                     const select = document.getElementById(`equipo_select_${equipoActual}`);
