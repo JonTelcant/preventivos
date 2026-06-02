@@ -460,7 +460,10 @@
                     
                     if (campoIndex !== -1 && campoIndex < equipoSeleccionado.length) {
                         const valor = equipoSeleccionado[campoIndex] || '';
+                        // Para inputs readonly, asegurar que el valor se actualice
+                        input.removeAttribute('readonly');
                         input.value = valor;
+                        input.setAttribute('readonly', 'readonly');
                         console.log(`Rellenando input con valor: ${valor}`);
                     } else {
                         console.log(`No se pudo rellenar: campoIndex=${campoIndex}, equipoSeleccionado.length=${equipoSeleccionado.length}`);
