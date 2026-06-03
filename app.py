@@ -8,6 +8,7 @@ import re
 import csv
 import google.auth
 from google.oauth2.credentials import Credentials
+from google.oauth2 import service_account
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
@@ -27,26 +28,18 @@ os.makedirs(DOWNLOAD_FOLDER, exist_ok=True)
 # Google Drive API scopes
 SCOPES = ['https://www.googleapis.com/auth/drive.file']
 CREDENTIALS_FILE = 'credentials.json'
-TOKEN_FILE = 'token.json'
 
 def obtener_servicio_drive():
-    """Obtiene el servicio de Google Drive autenticado."""
-    creds = None
-    if os.path.exists(TOKEN_FILE):
-        creds = Credentials.from_authorized_user_file(TOKEN_FILE, SCOPES)
-    
-    if not creds or not creds.valid:
-        if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-        else:
-            if not os.path.exists(CREDENTIALS_FILE):
-                return None
-            flow = InstalledAppFlow.from_client_secrets_file(CREDENTIALS_FILE, SCOPES)
-            creds = flow.run_local_server(port=0)
-        with open(TOKEN_FILE, 'w') as token:
-            token.write(creds.to_json())
-    
-    return build('drive', 'v3', credentials=creds)
+    """Obtiene el servicio de Google Drive autenticado usando Service Account."""
+    try:
+        creds = service_account.Credentials.from_service_account_file(
+            CREDENTIALS_FILE, scopes=SCOPES)
+        return build('drive', 'v3', credentials=creds)
+    except FileNotFoundError:
+        return None
+    except Exception as e:
+        print(f"Error al autenticar con Google Drive: {str(e)}")
+        return None
 
 def subir_archivo_drive(ruta_archivo, nombre_archivo, carpeta_destino):
     """Sube un archivo a Google Drive en la carpeta especificada (puede ser ruta anidada)."""
@@ -1069,7 +1062,7 @@ def guardar_respuestas():
         wb_respuestas.save(ruta_temporal)
         wb_respuestas.close()
         
-        # Subir a Google Drive
+        # Subir a Google Drive usando Service Account
         carpeta_destino = f"preventivos/gipuzcoa/{año_actual}"
         exito_drive, mensaje_drive = subir_archivo_drive(ruta_temporal, nombre_archivo, carpeta_destino)
         
