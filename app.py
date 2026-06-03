@@ -36,6 +36,9 @@ def obtener_servicio_drive():
         creds = None
         if os.path.exists(TOKEN_FILE):
             creds = Credentials.from_authorized_user_file(TOKEN_FILE, SCOPES)
+        else:
+            print(f"Error: No se encontró el archivo {TOKEN_FILE}")
+            return None
         
         if creds and creds.valid:
             return build('drive', 'v3', credentials=creds)
@@ -50,7 +53,7 @@ def obtener_servicio_drive():
                 print(f"Error al renovar token: {str(e)}")
                 return None
         
-        # No intentar crear nuevo token en entorno de servidor (sin navegador)
+        print("Error: Token inválido o expirado sin refresh token")
         return None
         
     except Exception as e:
