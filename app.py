@@ -28,15 +28,31 @@ os.makedirs(DOWNLOAD_FOLDER, exist_ok=True)
 # Google Drive API scopes
 SCOPES = ['https://www.googleapis.com/auth/drive.file']
 CREDENTIALS_FILE = 'credentials.json'
+TOKEN_FILE = 'token.json'
 
 def obtener_servicio_drive():
-    """Obtiene el servicio de Google Drive autenticado usando Service Account."""
+    """Obtiene el servicio de Google Drive autenticado usando OAuth con token pre-generado."""
     try:
-        creds = service_account.Credentials.from_service_account_file(
-            CREDENTIALS_FILE, scopes=SCOPES)
-        return build('drive', 'v3', credentials=creds)
-    except FileNotFoundError:
+        creds = None
+        if os.path.exists(TOKEN_FILE):
+            creds = Credentials.from_authorized_user_file(TOKEN_FILE, SCOPES)
+        
+        if creds and creds.valid:
+            return build('drive', 'v3', credentials=creds)
+        
+        if creds and creds.expired and creds.refresh_token:
+            try:
+                creds.refresh(Request())
+                with open(TOKEN_FILE, 'w') as token:
+                    token.write(creds.to_json())
+                return build('drive', 'v3', credentials=creds)
+            except Exception as e:
+                print(f"Error al renovar token: {str(e)}")
+                return None
+        
+        # No intentar crear nuevo token en entorno de servidor (sin navegador)
         return None
+        
     except Exception as e:
         print(f"Error al autenticar con Google Drive: {str(e)}")
         return None
