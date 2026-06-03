@@ -591,13 +591,51 @@
             
             const formData = new FormData(this);
             const respuestas = {};
+            const tipos = [];
             
             for (let [key, value] of formData.entries()) {
                 respuestas[key] = value;
+                // Extraer el tipo de preventivo del nombre del campo
+                if (key.includes('_') && !key.startsWith('equipo_')) {
+                    const tipo = key.split('_')[0];
+                    if (!tipos.includes(tipo)) {
+                        tipos.push(tipo);
+                    }
+                }
             }
             
+            // Obtener el title de la URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const title = urlParams.get('title');
+            
             console.log('Respuestas:', respuestas);
-            alert('Respuestas guardadas (funcionalidad de guardado pendiente de implementación)');
+            console.log('Tipos:', tipos);
+            console.log('Title:', title);
+            
+            // Enviar respuestas al servidor
+            fetch('/guardar_respuestas', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    title: title,
+                    tipos: tipos,
+                    respuestas: respuestas
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Respuestas guardadas correctamente en Google Drive');
+                    window.location.href = '/';
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                alert('Error al guardar las respuestas: ' + error);
+            });
         });
         
         // Cerrar modal al hacer clic fuera

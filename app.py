@@ -6,6 +6,12 @@ from werkzeug.utils import secure_filename
 from difflib import SequenceMatcher as IndiceCoincidencia
 import re
 import csv
+import google.auth
+from google.oauth2.credentials import Credentials
+from google_auth_oauthlib.flow import InstalledAppFlow
+from google.auth.transport.requests import Request
+from googleapiclient.discovery import build
+from googleapiclient.http import MediaFileUpload
 
 app = Flask(__name__)
 app.secret_key = 'tu_clave_secreta_aqui'
@@ -17,6 +23,82 @@ MAPA_FILE = 'mapa_preventivos.xlsx'
 ALLOWED_EXTENSIONS = {'xlsx'}
 DOWNLOAD_FOLDER = 'downloads'
 os.makedirs(DOWNLOAD_FOLDER, exist_ok=True)
+
+# Google Drive API scopes
+SCOPES = ['https://www.googleapis.com/auth/drive.file']
+CREDENTIALS_FILE = 'credentials.json'
+TOKEN_FILE = 'token.json'
+
+def obtener_servicio_drive():
+    """Obtiene el servicio de Google Drive autenticado."""
+    creds = None
+    if os.path.exists(TOKEN_FILE):
+        creds = Credentials.from_authorized_user_file(TOKEN_FILE, SCOPES)
+    
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+        else:
+            if not os.path.exists(CREDENTIALS_FILE):
+                return None
+            flow = InstalledAppFlow.from_client_secrets_file(CREDENTIALS_FILE, SCOPES)
+            creds = flow.run_local_server(port=0)
+        with open(TOKEN_FILE, 'w') as token:
+            token.write(creds.to_json())
+    
+    return build('drive', 'v3', credentials=creds)
+
+def subir_archivo_drive(ruta_archivo, nombre_archivo, carpeta_destino):
+    """Sube un archivo a Google Drive en la carpeta especificada (puede ser ruta anidada)."""
+    try:
+        service = obtener_servicio_drive()
+        if not service:
+            return False, "No se pudo autenticar con Google Drive"
+        
+        # Dividir la ruta en carpetas anidadas
+        carpetas = carpeta_destino.split('/')
+        parent_id = None
+        
+        for carpeta in carpetas:
+            # Buscar o crear la carpeta
+            folder_id = None
+            query = f"name='{carpeta}' and mimeType='application/vnd.google-apps.folder'"
+            if parent_id:
+                query += f" and '{parent_id}' in parents"
+            
+            results = service.files().list(
+                q=query,
+                spaces='drive',
+                fields='files(id, name)'
+            ).execute()
+            
+            folders = results.get('files', [])
+            if folders:
+                folder_id = folders[0]['id']
+            else:
+                # Crear la carpeta
+                folder_metadata = {
+                    'name': carpeta,
+                    'mimeType': 'application/vnd.google-apps.folder'
+                }
+                if parent_id:
+                    folder_metadata['parents'] = [parent_id]
+                folder = service.files().create(body=folder_metadata, fields='id').execute()
+                folder_id = folder.get('id')
+            
+            parent_id = folder_id
+        
+        # Subir el archivo
+        file_metadata = {
+            'name': nombre_archivo,
+            'parents': [parent_id]
+        }
+        media = MediaFileUpload(ruta_archivo, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        file = service.files().create(body=file_metadata, media_body=media, fields='id').execute()
+        
+        return True, f"Archivo subido correctamente con ID: {file.get('id')}"
+    except Exception as e:
+        return False, f"Error al subir a Google Drive: {str(e)}"
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
@@ -883,6 +965,130 @@ def guardar_config():
         return jsonify({'success': True, 'message': 'Configuración guardada correctamente'})
     else:
         return jsonify({'success': False, 'message': error_msg})
+
+@app.route('/guardar_respuestas', methods=['POST'])
+def guardar_respuestas():
+    """Guarda las respuestas del formulario en Google Drive."""
+    data = request.json
+    title = data.get('title', '')
+    tipos = data.get('tipos', [])
+    respuestas = data.get('respuestas', {})
+    
+    if not title or not tipos:
+        return jsonify({'success': False, 'message': 'Faltan datos: title o tipos'})
+    
+    try:
+        # Leer mapa_preventivos.xlsx para obtener la estructura
+        wb_mapa = openpyxl.load_workbook(MAPA_FILE)
+        
+        # Crear nuevo workbook para las respuestas
+        wb_respuestas = openpyxl.Workbook()
+        # Eliminar la hoja por defecto
+        if 'Sheet' in wb_respuestas.sheetnames:
+            del wb_respuestas['Sheet']
+        
+        # Obtener el año actual
+        año_actual = datetime.now().year
+        
+        # Por cada tipo de preventivo, crear una hoja
+        for tipo in tipos:
+            if tipo not in wb_mapa.sheetnames:
+                continue
+            
+            # Crear hoja para este tipo
+            hoja_mapa = wb_mapa[tipo]
+            hoja_respuestas = wb_respuestas.create_sheet(title=tipo)
+            
+            # Copiar fila 1 (encabezados) de mapa_preventivos.xlsx
+            for col_idx, cell in enumerate(hoja_mapa[1], start=1):
+                hoja_respuestas.cell(row=1, column=col_idx, value=cell.value)
+            
+            # Copiar fila 2 (elemento): columnas A-D de mapa_preventivos, columna E = title
+            for col_idx in range(1, 5):  # Columnas A-D (1-4)
+                hoja_respuestas.cell(row=2, column=col_idx, value=hoja_mapa.cell(row=2, column=col_idx).value)
+            hoja_respuestas.cell(row=2, column=5, value=title)  # Columna E = title
+            
+            # Copiar fila 3 (posición validación): columnas A-D de mapa_preventivos
+            for col_idx in range(1, 5):  # Columnas A-D (1-4)
+                hoja_respuestas.cell(row=3, column=col_idx, value=hoja_mapa.cell(row=3, column=col_idx).value)
+            
+            # Añadir fila de encabezados de datos (fila 4)
+            hoja_respuestas.cell(row=4, column=1, value='Pregunta')
+            hoja_respuestas.cell(row=4, column=2, value='Posicion Celda')
+            hoja_respuestas.cell(row=4, column=3, value='Posicion Respuesta')
+            hoja_respuestas.cell(row=4, column=4, value='Hoja')
+            hoja_respuestas.cell(row=4, column=5, value='Respuesta')
+            
+            # Llenar datos de respuestas
+            fila_actual = 5
+            pregunta_index = 0
+            for fila in hoja_mapa.iter_rows(min_row=2):
+                pregunta = fila[0].value
+                if not pregunta:
+                    continue
+                
+                config = fila[4].value if len(fila) > 4 else None
+                if not config or config.lower() not in ['lista', 'rellenar'] and not config.lower().startswith('equipo'):
+                    pregunta_index += 1
+                    continue
+                
+                # Obtener información de la pregunta
+                posicion_celda = fila[1].value if len(fila) > 1 else ''
+                posicion_respuesta = fila[2].value if len(fila) > 2 else ''
+                hoja_nombre = fila[3].value if len(fila) > 3 else ''
+                
+                # Obtener la respuesta del formulario
+                # El nombre del campo en el formulario es tipo_indice
+                campo_nombre = f"{tipo}_{pregunta_index}"
+                respuesta = respuestas.get(campo_nombre, '')
+                
+                # Si es equipo, buscar la respuesta en el campo correspondiente
+                if config and config.lower().startswith('equipo'):
+                    nombre_equipo = config
+                    # Buscar campos de equipo
+                    for key, value in respuestas.items():
+                        if key.startswith(f'equipo_{nombre_equipo}_'):
+                            respuesta = value
+                            break
+                
+                # Añadir fila con los datos
+                hoja_respuestas.cell(row=fila_actual, column=1, value=pregunta)
+                hoja_respuestas.cell(row=fila_actual, column=2, value=posicion_celda)
+                hoja_respuestas.cell(row=fila_actual, column=3, value=posicion_respuesta)
+                hoja_respuestas.cell(row=fila_actual, column=4, value=hoja_nombre)
+                hoja_respuestas.cell(row=fila_actual, column=5, value=respuesta)
+                
+                fila_actual += 1
+                pregunta_index += 1
+        
+        wb_mapa.close()
+        
+        # Guardar el archivo Excel temporalmente
+        nombre_archivo = f"{title}.xlsx"
+        ruta_temporal = os.path.join(DOWNLOAD_FOLDER, nombre_archivo)
+        wb_respuestas.save(ruta_temporal)
+        wb_respuestas.close()
+        
+        # Subir a Google Drive
+        carpeta_destino = f"preventivos/gipuzcoa/{año_actual}"
+        exito_drive, mensaje_drive = subir_archivo_drive(ruta_temporal, nombre_archivo, carpeta_destino)
+        
+        # Limpiar archivo temporal
+        os.remove(ruta_temporal)
+        
+        if exito_drive:
+            return jsonify({
+                'success': True, 
+                'message': f'Respuestas guardadas correctamente en Google Drive: {mensaje_drive}'
+            })
+        else:
+            return jsonify({
+                'success': False, 
+                'message': f'Archivo guardado localmente pero error al subir a Google Drive: {mensaje_drive}'
+            })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Error al guardar respuestas: {str(e)}'})
 
 if __name__ == '__main__':
     app.run(debug=True)
