@@ -627,7 +627,7 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    alert('Respuestas guardadas correctamente en Google Drive');
+                    alert('Respuestas guardadas correctamente en Cloudflare R2');
                     window.location.href = '/';
                 } else {
                     alert('Error: ' + data.message);

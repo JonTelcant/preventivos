@@ -6,13 +6,8 @@ from werkzeug.utils import secure_filename
 from difflib import SequenceMatcher as IndiceCoincidencia
 import re
 import csv
-import google.auth
-from google.oauth2.credentials import Credentials
-from google.oauth2 import service_account
-from google_auth_oauthlib.flow import InstalledAppFlow
-from google.auth.transport.requests import Request
-from googleapiclient.discovery import build
-from googleapiclient.http import MediaFileUpload
+import boto3
+from botocore.client import Config
 
 app = Flask(__name__)
 app.secret_key = 'tu_clave_secreta_aqui'
@@ -25,86 +20,56 @@ ALLOWED_EXTENSIONS = {'xlsx'}
 DOWNLOAD_FOLDER = 'downloads'
 os.makedirs(DOWNLOAD_FOLDER, exist_ok=True)
 
-# Google Drive API scopes
-SCOPES = ['https://www.googleapis.com/auth/drive.file']
+# Cloudflare R2 Configuration
+R2_ACCOUNT_ID = os.environ.get('R2_ACCOUNT_ID')
+R2_ACCESS_KEY_ID = os.environ.get('R2_ACCESS_KEY_ID')
+R2_SECRET_ACCESS_KEY = os.environ.get('R2_SECRET_ACCESS_KEY')
+R2_BUCKET_NAME = os.environ.get('R2_BUCKET_NAME', 'preventivos-app')
+R2_ENDPOINT = os.environ.get('R2_ENDPOINT', f'https://{R2_ACCOUNT_ID}.r2.cloudflarestorage.com')
 
-def obtener_servicio_drive():
-    """Obtiene el servicio de Google Drive autenticado usando Service Account desde variable de entorno."""
+def obtener_cliente_r2():
+    """Obtiene el cliente de Cloudflare R2 configurado."""
     try:
-        # Intentar obtener las credenciales de la variable de entorno
-        credentials_json = os.environ.get('GOOGLE_CREDENTIALS')
-        if credentials_json:
-            import json
-            creds_dict = json.loads(credentials_json)
-            creds = service_account.Credentials.from_service_account_info(
-                creds_dict, scopes=SCOPES)
-            return build('drive', 'v3', credentials=creds)
+        if not all([R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY]):
+            print("Error: Faltan credenciales de R2 en variables de entorno")
+            return None
         
-        # Si no hay variable de entorno, intentar leer el archivo
-        SERVICE_ACCOUNT_FILE = 'credentials.json'
-        if os.path.exists(SERVICE_ACCOUNT_FILE):
-            creds = service_account.Credentials.from_service_account_file(
-                SERVICE_ACCOUNT_FILE, scopes=SCOPES)
-            return build('drive', 'v3', credentials=creds)
-        
-        print("Error: No se encontraron credenciales de Google Drive (variable de entorno o archivo)")
-        return None
-        
+        s3_client = boto3.client(
+            's3',
+            endpoint_url=R2_ENDPOINT,
+            aws_access_key_id=R2_ACCESS_KEY_ID,
+            aws_secret_access_key=R2_SECRET_ACCESS_KEY,
+            region_name='auto'
+        )
+        return s3_client
     except Exception as e:
-        print(f"Error al autenticar con Google Drive: {str(e)}")
+        print(f"Error al configurar cliente R2: {str(e)}")
         return None
 
-def subir_archivo_drive(ruta_archivo, nombre_archivo, carpeta_destino):
-    """Sube un archivo a Google Drive en la carpeta especificada (puede ser ruta anidada)."""
+def subir_archivo_r2(ruta_archivo, nombre_archivo, carpeta_destino):
+    """Sube un archivo a Cloudflare R2 en la carpeta especificada."""
     try:
-        service = obtener_servicio_drive()
-        if not service:
-            return False, "No se pudo autenticar con Google Drive"
+        s3_client = obtener_cliente_r2()
+        if not s3_client:
+            return False, "No se pudo configurar el cliente R2"
         
-        # Dividir la ruta en carpetas anidadas
-        carpetas = carpeta_destino.split('/')
-        parent_id = None
-        
-        for carpeta in carpetas:
-            # Buscar o crear la carpeta
-            folder_id = None
-            query = f"name='{carpeta}' and mimeType='application/vnd.google-apps.folder'"
-            if parent_id:
-                query += f" and '{parent_id}' in parents"
-            
-            results = service.files().list(
-                q=query,
-                spaces='drive',
-                fields='files(id, name)'
-            ).execute()
-            
-            folders = results.get('files', [])
-            if folders:
-                folder_id = folders[0]['id']
-            else:
-                # Crear la carpeta
-                folder_metadata = {
-                    'name': carpeta,
-                    'mimeType': 'application/vnd.google-apps.folder'
-                }
-                if parent_id:
-                    folder_metadata['parents'] = [parent_id]
-                folder = service.files().create(body=folder_metadata, fields='id').execute()
-                folder_id = folder.get('id')
-            
-            parent_id = folder_id
+        # Construir la clave del objeto (ruta completa)
+        clave = f"{carpeta_destino}/{nombre_archivo}"
         
         # Subir el archivo
-        file_metadata = {
-            'name': nombre_archivo,
-            'parents': [parent_id]
-        }
-        media = MediaFileUpload(ruta_archivo, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-        file = service.files().create(body=file_metadata, media_body=media, fields='id').execute()
+        s3_client.upload_file(
+            ruta_archivo,
+            R2_BUCKET_NAME,
+            clave,
+            ExtraArgs={'ContentType': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}
+        )
         
-        return True, f"Archivo subido correctamente con ID: {file.get('id')}"
+        # Generar URL pública (si el bucket es público)
+        url_publica = f"{R2_ENDPOINT}/{R2_BUCKET_NAME}/{clave}"
+        
+        return True, f"Archivo subido correctamente a R2: {url_publica}"
     except Exception as e:
-        return False, f"Error al subir a Google Drive: {str(e)}"
+        return False, f"Error al subir a R2: {str(e)}"
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
@@ -974,7 +939,7 @@ def guardar_config():
 
 @app.route('/guardar_respuestas', methods=['POST'])
 def guardar_respuestas():
-    """Guarda las respuestas del formulario en Google Drive."""
+    """Guarda las respuestas del formulario en Cloudflare R2."""
     data = request.json
     title = data.get('title', '')
     tipos = data.get('tipos', [])
@@ -1075,22 +1040,22 @@ def guardar_respuestas():
         wb_respuestas.save(ruta_temporal)
         wb_respuestas.close()
         
-        # Subir a Google Drive usando Service Account
+        # Subir a Cloudflare R2
         carpeta_destino = f"preventivos/gipuzcoa/{año_actual}"
-        exito_drive, mensaje_drive = subir_archivo_drive(ruta_temporal, nombre_archivo, carpeta_destino)
+        exito_r2, mensaje_r2 = subir_archivo_r2(ruta_temporal, nombre_archivo, carpeta_destino)
         
         # Limpiar archivo temporal
         os.remove(ruta_temporal)
         
-        if exito_drive:
+        if exito_r2:
             return jsonify({
                 'success': True, 
-                'message': f'Respuestas guardadas correctamente en Google Drive: {mensaje_drive}'
+                'message': f'Respuestas guardadas correctamente en Cloudflare R2: {mensaje_r2}'
             })
         else:
             return jsonify({
                 'success': False, 
-                'message': f'Archivo guardado localmente pero error al subir a Google Drive: {mensaje_drive}'
+                'message': f'Archivo guardado localmente pero error al subir a R2: {mensaje_r2}'
             })
         
     except Exception as e:
