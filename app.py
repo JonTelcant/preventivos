@@ -27,17 +27,29 @@ os.makedirs(DOWNLOAD_FOLDER, exist_ok=True)
 
 # Google Drive API scopes
 SCOPES = ['https://www.googleapis.com/auth/drive.file']
-SERVICE_ACCOUNT_FILE = 'credentials.json'
 
 def obtener_servicio_drive():
-    """Obtiene el servicio de Google Drive autenticado usando Service Account."""
+    """Obtiene el servicio de Google Drive autenticado usando Service Account desde variable de entorno."""
     try:
-        creds = service_account.Credentials.from_service_account_file(
-            SERVICE_ACCOUNT_FILE, scopes=SCOPES)
-        return build('drive', 'v3', credentials=creds)
-    except FileNotFoundError:
-        print(f"Error: No se encontró el archivo {SERVICE_ACCOUNT_FILE}")
+        # Intentar obtener las credenciales de la variable de entorno
+        credentials_json = os.environ.get('GOOGLE_CREDENTIALS')
+        if credentials_json:
+            import json
+            creds_dict = json.loads(credentials_json)
+            creds = service_account.Credentials.from_service_account_info(
+                creds_dict, scopes=SCOPES)
+            return build('drive', 'v3', credentials=creds)
+        
+        # Si no hay variable de entorno, intentar leer el archivo
+        SERVICE_ACCOUNT_FILE = 'credentials.json'
+        if os.path.exists(SERVICE_ACCOUNT_FILE):
+            creds = service_account.Credentials.from_service_account_file(
+                SERVICE_ACCOUNT_FILE, scopes=SCOPES)
+            return build('drive', 'v3', credentials=creds)
+        
+        print("Error: No se encontraron credenciales de Google Drive (variable de entorno o archivo)")
         return None
+        
     except Exception as e:
         print(f"Error al autenticar con Google Drive: {str(e)}")
         return None
