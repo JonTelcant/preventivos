@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_file, session
+_`from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_file, session
 import openpyxl
 import os
 from datetime import datetime
@@ -949,7 +949,7 @@ def guardar_respuestas():
         return jsonify({'success': False, 'message': 'Faltan datos: title o tipos'})
     
     try:
-        # Leer mapa_preventivos.xlsx para obtener la estructura
+        # Leer mapa_preventivos.xlsx para obtener la estructura original
         wb_mapa = openpyxl.load_workbook(MAPA_FILE)
         
         # Crear nuevo workbook para las respuestas
@@ -961,77 +961,79 @@ def guardar_respuestas():
         # Obtener el año actual
         año_actual = datetime.now().year
         
-        # Por cada tipo de preventivo, crear una hoja
+        # Por cada tipo de preventivo, crear una hoja idéntica a la del mapa
         for tipo in tipos:
             if tipo not in wb_mapa.sheetnames:
                 continue
             
-            # Crear hoja para este tipo
+            # Obtener la hoja original del mapa
             hoja_mapa = wb_mapa[tipo]
+            # Crear la hoja correspondiente en el excel de respuestas
             hoja_respuestas = wb_respuestas.create_sheet(title=tipo)
             
-            # Copiar fila 1 (encabezados) de mapa_preventivos.xlsx
-            for col_idx, cell in enumerate(hoja_mapa[1], start=1):
-                hoja_respuestas.cell(row=1, column=col_idx, value=cell.value)
+            # Copiar absolutamente todas las filas y columnas de la hoja original
+            for r_idx, row in enumerate(hoja_mapa.iter_rows(values_only=True), start=1):
+                for c_idx, val in enumerate(row, start=1):
+                    hoja_respuestas.cell(row=r_idx, column=c_idx, value=val)
             
-            # Copiar fila 2 (elemento): columnas A-D de mapa_preventivos, columna E = title
-            for col_idx in range(1, 5):  # Columnas A-D (1-4)
-                hoja_respuestas.cell(row=2, column=col_idx, value=hoja_mapa.cell(row=2, column=col_idx).value)
-            hoja_respuestas.cell(row=2, column=5, value=title)  # Columna E = title
+            # Reconstruir la lista de items exactamente igual que en /rellenar
+            # para mapear correctamente los nombres de campos del formulario con las filas reales de Excel.
+            items_mapeados = []
+            equipos_procesados = set()
             
-            # Copiar fila 3 (posición validación): columnas A-D de mapa_preventivos
-            for col_idx in range(1, 5):  # Columnas A-D (1-4)
-                hoja_respuestas.cell(row=3, column=col_idx, value=hoja_mapa.cell(row=3, column=col_idx).value)
+            for row_idx, fila in enumerate(hoja_mapa.iter_rows(min_row=2, values_only=True), start=2):
+                pregunta = fila[0]
+                if pregunta:
+                    config = fila[4] if len(fila) > 4 else None
+                    valor = fila[5] if len(fila) > 5 else None
+                    
+                    es_equipo = False
+                    nombre_equipo = None
+                    if config and str(config).lower().startswith('equipo'):
+                        es_equipo = True
+                        nombre_equipo = config
+                    
+                    # Solo incluir si la configuración es 'lista', 'rellenar' o 'equipoXX'
+                    if config and (str(config).lower() in ['lista', 'rellenar'] or es_equipo):
+                        if es_equipo and nombre_equipo not in equipos_procesados:
+                            # Añadir selector (que incrementa el loop.index en rellenar.html)
+                            items_mapeados.append({
+                                'tipo': 'equipo_selector',
+                                'nombre_equipo': nombre_equipo
+                            })
+                            equipos_procesados.add(nombre_equipo)
+                        
+                        # Añadir la pregunta con su fila real
+                        if es_equipo:
+                            campo_nombre = f"equipo_{nombre_equipo}_{len(items_mapeados)}"
+                        else:
+                            campo_nombre = f"{tipo}_{len(items_mapeados)}"
+                            
+                        items_mapeados.append({
+                            'tipo': 'pregunta',
+                            'row_idx': row_idx,
+                            'config': config,
+                            'valor_original': valor,
+                            'campo_nombre': campo_nombre
+                        })
             
-            # Añadir fila de encabezados de datos (fila 4)
-            hoja_respuestas.cell(row=4, column=1, value='Pregunta')
-            hoja_respuestas.cell(row=4, column=2, value='Posicion Celda')
-            hoja_respuestas.cell(row=4, column=3, value='Posicion Respuesta')
-            hoja_respuestas.cell(row=4, column=4, value='Hoja')
-            hoja_respuestas.cell(row=4, column=5, value='Respuesta')
-            
-            # Llenar datos de respuestas
-            fila_actual = 5
-            pregunta_index = 0
-            for fila in hoja_mapa.iter_rows(min_row=2):
-                pregunta = fila[0].value
-                if not pregunta:
-                    continue
-                
-                config = fila[4].value if len(fila) > 4 else None
-                if not config or config.lower() not in ['lista', 'rellenar'] and not config.lower().startswith('equipo'):
-                    pregunta_index += 1
-                    continue
-                
-                # Obtener información de la pregunta
-                posicion_celda = fila[1].value if len(fila) > 1 else ''
-                posicion_respuesta = fila[2].value if len(fila) > 2 else ''
-                hoja_nombre = fila[3].value if len(fila) > 3 else ''
-                
-                # Obtener la respuesta del formulario
-                # El nombre del campo en el formulario es tipo_indice
-                campo_nombre = f"{tipo}_{pregunta_index}"
-                respuesta = respuestas.get(campo_nombre, '')
-                
-                # Si es equipo, buscar la respuesta en el campo correspondiente
-                if config and config.lower().startswith('equipo'):
-                    nombre_equipo = config
-                    # Buscar campos de equipo
-                    for key, value in respuestas.items():
-                        if key.startswith(f'equipo_{nombre_equipo}_'):
-                            respuesta = value
-                            break
-                
-                # Añadir fila con los datos
-                hoja_respuestas.cell(row=fila_actual, column=1, value=pregunta)
-                hoja_respuestas.cell(row=fila_actual, column=2, value=posicion_celda)
-                hoja_respuestas.cell(row=fila_actual, column=3, value=posicion_respuesta)
-                hoja_respuestas.cell(row=fila_actual, column=4, value=hoja_nombre)
-                hoja_respuestas.cell(row=fila_actual, column=5, value=respuesta)
-                
-                fila_actual += 1
-                pregunta_index += 1
-        
+            # Actualizar la columna F (columna 6) con las respuestas correspondientes
+            for item in items_mapeados:
+                if item['tipo'] == 'pregunta':
+                    row_idx = item['row_idx']
+                    config = item['config']
+                    valor_original = item['valor_original']
+                    campo_nombre = item['campo_nombre']
+                    
+                    # Si config es 'ignorar' o 'defecto' (aunque en teoría no se renderizan, se controla por seguridad)
+                    if config and str(config).lower() in ['ignorar', 'defecto']:
+                        # Mantener el valor original en columna F
+                        hoja_respuestas.cell(row=row_idx, column=6, value=valor_original)
+                    else:
+                        # Rellenar con la respuesta obtenida del formulario
+                        respuesta_usuario = respuestas.get(campo_nombre, '')
+                        hoja_respuestas.cell(row=row_idx, column=6, value=respuesta_usuario)
+                        
         wb_mapa.close()
         
         # Guardar el archivo Excel temporalmente
