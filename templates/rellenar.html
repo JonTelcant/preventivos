@@ -361,7 +361,11 @@
                     
                     {% if item.data.config and item.data.config.lower() == 'rellenar' %}
                         {% if item.data.valor and item.data.valor.lower() == 'numero' %}
-                        <input type="number" class="campo-input" name="{{ tipo }}_{{ loop.index0 }}" placeholder="Ingrese un número">
+                            {% if 'hora' in item.data.pregunta.lower() or 'tiempo' in item.data.pregunta.lower() %}
+                            <input type="time" class="campo-input" name="{{ tipo }}_{{ loop.index0 }}" placeholder="HH:MM" data-tipo="hora">
+                            {% else %}
+                            <input type="number" step="any" class="campo-input" name="{{ tipo }}_{{ loop.index0 }}" placeholder="Ingrese un número" data-tipo="numero">
+                            {% endif %}
                         {% elif item.data.valor and item.data.valor.lower() == 'fecha' %}
                         <input type="date" class="campo-input" name="{{ tipo }}_{{ loop.index0 }}">
                         {% elif item.data.valor and item.data.valor.lower() == 'texto' %}
