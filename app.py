@@ -1033,6 +1033,10 @@ def guardar_respuestas():
                         # Rellenar con la respuesta obtenida del formulario
                         respuesta_usuario = respuestas.get(campo_nombre, '')
                         hoja_respuestas.cell(row=row_idx, column=6, value=respuesta_usuario)
+                        # Si la configuración era 'lista', limpiar las columnas subsiguientes (G, H, etc.)
+                        if config and str(config).lower() == 'lista':
+                            for col_to_clear in range(7, hoja_respuestas.max_column + 1):
+                                hoja_respuestas.cell(row=row_idx, column=col_to_clear, value='')
                         
         wb_mapa.close()
         
