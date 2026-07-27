@@ -9,9 +9,12 @@ import csv
 import boto3
 from botocore.client import Config
 
+from flask_session import Session
+
 app = Flask(__name__)
 app.secret_key = 'tu_clave_secreta_aqui'
 app.config['SESSION_TYPE'] = 'filesystem'
+Session(app)
 
 # Configuración
 UPLOAD_FOLDER = 'uploads'
@@ -750,6 +753,14 @@ def comparar_upload():
                                      total_coincidencias=len(lista_resultado),
                                      total_multiple=len(lista_multiple))
             
+            # Asegurar que todas las filas tengan exactamente 7 columnas (quitando emplazamiento[0] si existe)
+            lista_final = []
+            for item in lista_resultado:
+                if len(item) > 7:
+                    lista_final.append(item[:7])
+                else:
+                    lista_final.append(item)
+
             # Si no hay múltiples coincidencias, generar CSV directamente
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             csv_filename = f"preventivos_{timestamp}.csv"
@@ -758,7 +769,7 @@ def comparar_upload():
             with open(csv_path, mode="w", newline="", encoding="utf-8") as archivo:
                 escritor = csv.writer(archivo)
                 escritor.writerow(["Folder name", "Folder color", "Latitude", "Longitude", "Title", "Description", "Color"])
-                escritor.writerows(lista_resultado)
+                escritor.writerows(lista_final)
             
             # Limpiar archivos temporales
             os.remove(filepath_preventivos)
@@ -799,6 +810,14 @@ def procesar_selecciones():
             coincidencia_formateada = coincidencia_seleccionada[:-1]
             lista_resultado.append(coincidencia_formateada)
     
+    # Asegurar que todas las filas tengan exactamente 7 columnas (quitando emplazamiento[0] si existe)
+    lista_final = []
+    for item in lista_resultado:
+        if len(item) > 7:
+            lista_final.append(item[:7])
+        else:
+            lista_final.append(item)
+
     # Generar CSV
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     csv_filename = f"preventivos_{timestamp}.csv"
@@ -807,7 +826,7 @@ def procesar_selecciones():
     with open(csv_path, mode="w", newline="", encoding="utf-8") as archivo:
         escritor = csv.writer(archivo)
         escritor.writerow(["Folder name", "Folder color", "Latitude", "Longitude", "Title", "Description", "Color"])
-        escritor.writerows(lista_resultado)
+        escritor.writerows(lista_final)
     
     # Limpiar sesión
     session.pop('lista_resultado', None)
