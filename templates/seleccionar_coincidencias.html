@@ -306,7 +306,10 @@
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ selecciones: selecciones })
+                body: JSON.stringify({ 
+                    selecciones: selecciones,
+                    session_id: "{{ session_id }}"
+                })
             })
             .then(response => response.json())
             .then(data => {

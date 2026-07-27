@@ -9,9 +9,12 @@ import csv
 import boto3
 from botocore.client import Config
 
+from flask_session import Session
+
 app = Flask(__name__)
 app.secret_key = 'tu_clave_secreta_aqui'
 app.config['SESSION_TYPE'] = 'filesystem'
+Session(app)
 
 # Configuración
 UPLOAD_FOLDER = 'uploads'
@@ -737,9 +740,16 @@ def comparar_upload():
             
             # Si hay múltiples coincidencias, mostrar página de selección
             if lista_multiple:
-                # Guardar datos en sesión para usarlos después
-                session['lista_resultado'] = lista_resultado
-                session['lista_multiple'] = lista_multiple
+                import json
+                import uuid
+                session_id = str(uuid.uuid4())
+                temp_data = {
+                    'lista_resultado': lista_resultado,
+                    'lista_multiple': lista_multiple
+                }
+                temp_filepath = os.path.join(app.config['UPLOAD_FOLDER'], f'temp_session_{session_id}.json')
+                with open(temp_filepath, 'w', encoding='utf-8') as f:
+                    json.dump(temp_data, f)
                 
                 # Limpiar archivos temporales
                 os.remove(filepath_preventivos)
@@ -748,8 +758,17 @@ def comparar_upload():
                 return render_template('seleccionar_coincidencias.html', 
                                      lista_multiple=lista_multiple,
                                      total_coincidencias=len(lista_resultado),
-                                     total_multiple=len(lista_multiple))
+                                     total_multiple=len(lista_multiple),
+                                     session_id=session_id)
             
+            # Asegurar que todas las filas tengan exactamente 7 columnas (quitando emplazamiento[0] si existe)
+            lista_final = []
+            for item in lista_resultado:
+                if len(item) > 7:
+                    lista_final.append(item[:7])
+                else:
+                    lista_final.append(item)
+
             # Si no hay múltiples coincidencias, generar CSV directamente
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             csv_filename = f"preventivos_{timestamp}.csv"
@@ -758,7 +777,7 @@ def comparar_upload():
             with open(csv_path, mode="w", newline="", encoding="utf-8") as archivo:
                 escritor = csv.writer(archivo)
                 escritor.writerow(["Folder name", "Folder color", "Latitude", "Longitude", "Title", "Description", "Color"])
-                escritor.writerows(lista_resultado)
+                escritor.writerows(lista_final)
             
             # Limpiar archivos temporales
             os.remove(filepath_preventivos)
@@ -782,10 +801,21 @@ def comparar_upload():
 def procesar_selecciones():
     data = request.json
     selecciones = data.get('selecciones', [])
+    session_id = data.get('session_id', '')
     
-    # Recuperar datos de la sesión
-    lista_resultado = session.get('lista_resultado', [])
-    lista_multiple = session.get('lista_multiple', [])
+    if not session_id:
+        return jsonify({'success': False, 'message': 'No se encontró el ID de sesión.'})
+        
+    temp_filepath = os.path.join(app.config['UPLOAD_FOLDER'], f'temp_session_{session_id}.json')
+    if not os.path.exists(temp_filepath):
+        return jsonify({'success': False, 'message': 'La sesión temporal ha expirado o no existe.'})
+        
+    import json
+    with open(temp_filepath, 'r', encoding='utf-8') as f:
+        temp_data = json.load(f)
+        
+    lista_resultado = temp_data.get('lista_resultado', [])
+    lista_multiple = temp_data.get('lista_multiple', [])
     
     # Procesar selecciones del usuario
     for sel in selecciones:
@@ -799,6 +829,14 @@ def procesar_selecciones():
             coincidencia_formateada = coincidencia_seleccionada[:-1]
             lista_resultado.append(coincidencia_formateada)
     
+    # Asegurar que todas las filas tengan exactamente 7 columnas (quitando emplazamiento[0] si existe)
+    lista_final = []
+    for item in lista_resultado:
+        if len(item) > 7:
+            lista_final.append(item[:7])
+        else:
+            lista_final.append(item)
+
     # Generar CSV
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     csv_filename = f"preventivos_{timestamp}.csv"
@@ -807,11 +845,11 @@ def procesar_selecciones():
     with open(csv_path, mode="w", newline="", encoding="utf-8") as archivo:
         escritor = csv.writer(archivo)
         escritor.writerow(["Folder name", "Folder color", "Latitude", "Longitude", "Title", "Description", "Color"])
-        escritor.writerows(lista_resultado)
+        escritor.writerows(lista_final)
     
-    # Limpiar sesión
-    session.pop('lista_resultado', None)
-    session.pop('lista_multiple', None)
+    # Limpiar archivo temporal
+    if os.path.exists(temp_filepath):
+        os.remove(temp_filepath)
     
     return jsonify({
         'success': True,
