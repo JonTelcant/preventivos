@@ -9,12 +9,9 @@ import csv
 import boto3
 from botocore.client import Config
 
-from flask_session import Session
-
 app = Flask(__name__)
 app.secret_key = 'tu_clave_secreta_aqui'
 app.config['SESSION_TYPE'] = 'filesystem'
-Session(app)
 
 # Configuración
 UPLOAD_FOLDER = 'uploads'
