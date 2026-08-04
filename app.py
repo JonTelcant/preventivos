@@ -164,7 +164,7 @@ def leer_excel_preventivos(archivo):
             emplazamiento_b = fila[6].value
             emplazamiento_formateado_a = formatear_emplazamiento(str(emplazamiento_a)) if emplazamiento_a else ""
             emplazamiento_formateado_b = formatear_emplazamiento(str(emplazamiento_b)) if emplazamiento_b else ""
-            accion = str(fila[8].value) if fila[8].value else ""
+            accion = str(fila[10].value) if fila[10].value else ""
         else:
             if cont != 1:
                 accion = accion + "\n" + str(fila[8].value)
