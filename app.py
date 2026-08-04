@@ -123,7 +123,9 @@ def accion_a_tipos(accion):
         'MP CABLE DE VIDA ANUAL': 'GS',
         'MP EB CF ANUAL': 'CF',
         'MP EB AA ANUAL': 'AA',
-        'MP EB ARMARIO INTEMPERIE': 'AI'
+        'MP EB ARMARIO INTEMPERIE': 'AI',
+        'MP EB BAJA TENSION SIN BALIZA ANUAL': 'BT',
+        'MP EB Cuadro de Fuerza Anual Sin Baterias': 'CF'
     }
     
     # Buscar coincidencias exactas en el texto de acción
