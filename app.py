@@ -124,7 +124,7 @@ def accion_a_tipos(accion):
         'MP EB CF ANUAL': 'CF',
         'MP EB AA ANUAL': 'AA',
         'MP EB ARMARIO INTEMPERIE': 'AI',
-        'MP EB BAJA TENSION SIN BALIZA ANUAL': 'BT',
+        'MP EB Baja Tension Sin Baliza Anual': 'BT',
         'MP EB Cuadro de Fuerza Anual Sin Baterias': 'CF'
     }
     
