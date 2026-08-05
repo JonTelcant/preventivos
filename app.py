@@ -1130,7 +1130,7 @@ def guardar_respuestas():
     except Exception as e:
         return jsonify({'success': False, 'message': f'Error al guardar respuestas: {str(e)}'})
 
-@app.route('/subir_preventivo', methods=['POST'])
+@app.route('/subir_preventivo', methods=['GET'])
 def hola():
     return render_template("index.html")
 if __name__ == '__main__':
