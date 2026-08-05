@@ -75,6 +75,26 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
+def descargar_archivo_r2(nombre_archivo, carpeta_origen, ruta_destino):
+    """Descarga un archivo XLSX desde Cloudflare R2 y lo guarda localmente."""
+    try:
+        s3_client = obtener_cliente_r2()
+        if not s3_client:
+            return False, "No se pudo configurar el cliente R2"
+
+        clave = f"{carpeta_origen}/{nombre_archivo}"
+
+        s3_client.download_file(
+            R2_BUCKET_NAME,
+            clave,
+            ruta_destino
+        )
+
+        return True, f"Archivo descargado correctamente desde R2: {ruta_destino}"
+    except Exception as e:
+        return False, f"Error al descargar desde R2: {str(e)}"
+
+
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
@@ -581,7 +601,9 @@ def rellenar():
     
     # Leer el archivo mapa_preventivos.xlsx
     try:
-        wb = openpyxl.load_workbook(MAPA_FILE)
+        ruta_local = MAPA_FILE  # por ejemplo 'mapa_preventivos.xlsx'
+        descargar_archivo_r2('mapa_preventivos.xlsx', 'preventivos', ruta_local)
+        wb = openpyxl.load_workbook(ruta_local)
     except Exception as e:
         flash(f'Error al cargar el archivo mapa_preventivos.xlsx: {str(e)}')
         return redirect(url_for('index'))
