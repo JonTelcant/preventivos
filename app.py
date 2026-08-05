@@ -922,7 +922,9 @@ def guardar_equipo():
         
         # Guardar el Excel
         wb.save(MAPA_FILE)
+
         wb.close()
+        exito_r2, mensaje_r2 = subir_archivo_r2(MAPA_FILE, MAPA_FILE, "preventivos")
         
         return jsonify({'success': True, 'message': 'Equipo guardado correctamente'})
         
