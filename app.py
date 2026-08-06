@@ -601,17 +601,20 @@ def rellenar():
     
     # Leer el archivo mapa_preventivos.xlsx
     try:
-        ruta_local = MAPA_FILE  # por ejemplo 'mapa_preventivos.xlsx'
+        ruta_local = MAPA_FILE  
         descargar_archivo_r2('mapa_preventivos.xlsx', 'preventivos', ruta_local)
         
-    except Exception as e:
-        return f"CRASH DETECTADO: {str(e)}"
-        #flash(f'Error al cargar el archivo mapa_preventivos.xlsx: {str(e)}')
-        #return redirect(url_for('index'))
-    try:
+        # NUEVO: Comprobar tamaño del archivo descargado
+        tamano = os.path.getsize(ruta_local)
+        print(f"Tamaño del archivo descargado: {tamano} bytes")
+        if tamano < 1000:
+            # Si pesa muy poco, seguramente descargó un error en texto y no el Excel
+            with open(ruta_local, 'r', encoding='utf-8', errors='ignore') as f:
+                print("Contenido del archivo descargado:", f.read())
+
         wb = openpyxl.load_workbook(ruta_local)
     except Exception as e:
-        return f"CRASH DETECTADO: {str(e)}"   
+        return f"CRASH DETECTADO: {str(e)}"  
     # Para cada tipo, buscar la hoja correspondiente y leer las preguntas
     items_por_tipo = {}  # Para mantener el orden original
     equipos_por_tipo = {}  # Para guardar información de equipos por tipo
