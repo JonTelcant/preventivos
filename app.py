@@ -1148,7 +1148,7 @@ def validar_archivo():
     if file and allowed_file(file.filename):
         filename = secure_filename(file.filename)
         
-        tipo_preventivo = obtener_tipo_preventivo(file.name)
+        tipo_preventivo = obtener_tipo_preventivo(file.filename)
         if tipo_preventivo != "DESCONOCIDO":
             # Devuelve éxito y el texto que quieres mostrar
             return jsonify({
@@ -1158,7 +1158,7 @@ def validar_archivo():
         else:
             return jsonify({
                 'success': False, 
-                'error': f'Tipo de preventivo desconocido: {tipo_preventivo} -- {file.name}'
+                'error': f'Tipo de preventivo desconocido: {tipo_preventivo} -- {file.filename}'
             }), 400
 
     return jsonify({'success': False, 'error': 'Formato incorrecto. Sube un archivo .xlsx'}), 400
