@@ -608,7 +608,10 @@ def rellenar():
         return f"CRASH DETECTADO: {str(e)}"
         #flash(f'Error al cargar el archivo mapa_preventivos.xlsx: {str(e)}')
         #return redirect(url_for('index'))
-    wb = openpyxl.load_workbook(ruta_local)
+    try:
+        wb = openpyxl.load_workbook(ruta_local)
+    except Exception as e:
+        return f"CRASH DETECTADO: {str(e)}"   
     # Para cada tipo, buscar la hoja correspondiente y leer las preguntas
     items_por_tipo = {}  # Para mantener el orden original
     equipos_por_tipo = {}  # Para guardar información de equipos por tipo
