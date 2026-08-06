@@ -19,7 +19,7 @@ MAPA_FILE = 'mapa_preventivos.xlsx'
 ALLOWED_EXTENSIONS = {'xlsx'}
 DOWNLOAD_FOLDER = 'downloads'
 os.makedirs(DOWNLOAD_FOLDER, exist_ok=True)
-
+#
 # Cloudflare R2 Configuration
 R2_ACCOUNT_ID = os.environ.get('R2_ACCOUNT_ID')
 R2_ACCESS_KEY_ID = os.environ.get('R2_ACCESS_KEY_ID')
@@ -1131,7 +1131,36 @@ def guardar_respuestas():
         return jsonify({'success': False, 'message': f'Error al guardar respuestas: {str(e)}'})
 
 @app.route('/subir_preventivo', methods=['GET'])
-def hola():
+def subir_preventivo():
     return render_template("subir_preventivo.html")
+
+@app.route('/validar_preventivo', methods=['POST'])
+    def validar_archivo():
+# Coincide con formData.append('file', file)
+        if 'file' not in request.files:
+            return jsonify({'success': False, 'error': 'No se encontró el archivo en la petición'}), 400
+        
+        file = request.files['file']
+        
+        if file.filename == '':
+            return jsonify({'success': False, 'error': 'No se seleccionó ningún archivo'}), 400
+            
+        if file and allowed_file(file.filename):
+            filename = secure_filename(file.filename)
+            
+            tipo_preventivo = obtener_tipo_preventivo(file.name)
+            if tipo_preventivo != "DESCONOCIDO":
+                # Devuelve éxito y el texto que quieres mostrar
+                return jsonify({
+                    'success': True, 
+                    'message': 'Preventivo detectado correctamente'
+                })
+            else:
+                return jsonify({
+                    'success': False, 
+                    'error': 'Tipo de preventivo desconocido'
+                }), 400
+                       
+        return jsonify({'success': False, 'error': 'Formato incorrecto. Sube un archivo .xlsx'}), 400
 if __name__ == '__main__':
     app.run(debug=True)
