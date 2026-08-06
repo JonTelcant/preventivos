@@ -1135,32 +1135,32 @@ def subir_preventivo():
     return render_template("subir_preventivo.html")
 
 @app.route('/validar_preventivo', methods=['POST'])
-    def validar_archivo():
+def validar_archivo():
 # Coincide con formData.append('file', file)
-        if 'file' not in request.files:
-            return jsonify({'success': False, 'error': 'No se encontró el archivo en la petición'}), 400
+    if 'file' not in request.files:
+        return jsonify({'success': False, 'error': 'No se encontró el archivo en la petición'}), 400
+    
+    file = request.files['file']
+    
+    if file.filename == '':
+        return jsonify({'success': False, 'error': 'No se seleccionó ningún archivo'}), 400
         
-        file = request.files['file']
+    if file and allowed_file(file.filename):
+        filename = secure_filename(file.filename)
         
-        if file.filename == '':
-            return jsonify({'success': False, 'error': 'No se seleccionó ningún archivo'}), 400
-            
-        if file and allowed_file(file.filename):
-            filename = secure_filename(file.filename)
-            
-            tipo_preventivo = obtener_tipo_preventivo(file.name)
-            if tipo_preventivo != "DESCONOCIDO":
-                # Devuelve éxito y el texto que quieres mostrar
-                return jsonify({
-                    'success': True, 
-                    'message': 'Preventivo detectado correctamente'
-                })
-            else:
-                return jsonify({
-                    'success': False, 
-                    'error': 'Tipo de preventivo desconocido'
-                }), 400
-                       
-        return jsonify({'success': False, 'error': 'Formato incorrecto. Sube un archivo .xlsx'}), 400
+        tipo_preventivo = obtener_tipo_preventivo(file.name)
+        if tipo_preventivo != "DESCONOCIDO":
+            # Devuelve éxito y el texto que quieres mostrar
+            return jsonify({
+                'success': True, 
+                'message': 'Preventivo detectado correctamente'
+            })
+        else:
+            return jsonify({
+                'success': False, 
+                'error': 'Tipo de preventivo desconocido'
+            }), 400
+
+    return jsonify({'success': False, 'error': 'Formato incorrecto. Sube un archivo .xlsx'}), 400
 if __name__ == '__main__':
     app.run(debug=True)
