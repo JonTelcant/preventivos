@@ -1153,15 +1153,49 @@ def validar_archivo():
         return jsonify({'success': False, 'error': 'No se seleccionó ningún archivo'}), 400
         
     if file and allowed_file(file.filename):
-        filename = secure_filename(file.filename)
-        
+        filename = secure_filename(file.filename)        
         tipo_preventivo = obtener_tipo_preventivo(file.filename)
         if tipo_preventivo != "DESCONOCIDO":
-            # Devuelve éxito y el texto que quieres mostrar
-            return jsonify({
-                'success': True, 
-                'message': 'Preventivo detectado correctamente'
-            })
+            try:
+        # 1. Guardar el archivo subido en el servidor antes de leerlo
+                filename_preventivos = secure_filename(file_preventivos.filename)
+                filepath_preventivos = os.path.join(app.config['UPLOAD_FOLDER'], filename_preventivos)
+                file_preventivos.save(filepath_preventivos)  # <-- ¡Importante: faltaba guardar el archivo!
+
+                # 2. Cargar el archivo de preventivos
+                wb_preventivos = openpyxl.load_workbook(filepath_preventivos)
+
+                # 3. Descargar y cargar el mapa de preventivos
+                ruta_local = MAPA_FILE  
+                descargar_archivo_r2('mapa_preventivos.xlsx', 'preventivos', ruta_local)
+                wb_mapa = openpyxl.load_workbook(ruta_local)
+
+            except Exception as e:
+                 return f"CRASH DETECTADO: {str(e)}"  
+
+                # 4. Seleccionar la hoja (asegúrate de que tipo_preventivo sea int o str según corresponda)
+                hoja_mapa = wb_mapa[tipo_preventivo]
+
+                # 5. Iterar correctamente saltándose la cabecera (fila 0)
+                coincidencia_mapa = 0
+                for i, fila in enumerate(hoja_mapa.rows):
+                    if i == 0:
+                        continue  # Salta la cabecera
+                        
+                    pregunta_mapa = fila[0].value
+                    celda_mapa = fila[1].value
+                    nombre_hoja_preventivo = fila[3].value
+                    hoja_preventivo = wb_preventivos[nombre_hoja_preventivo]
+                    pregunta_preventivo = hoja_preventivo[celda_mapa].value
+                    if pregunta_mapa != pregunta_preventivo:
+                        coincidencia_mapa = 1
+
+                if coincidencia_mapa == 0:
+                    # Devuelve éxito y el texto que quieres mostrar
+                    return jsonify({
+                        'success': True, 
+                        'message': 'Preventivo detectado correctamente, el mapa esta bien actualizado'
+                    })
         else:
             return jsonify({
                 'success': False, 
