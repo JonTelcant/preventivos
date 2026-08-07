@@ -1173,29 +1173,29 @@ def validar_archivo():
             except Exception as e:
                  return f"CRASH DETECTADO: {str(e)}"  
 
-                # 4. Seleccionar la hoja (asegúrate de que tipo_preventivo sea int o str según corresponda)
-                hoja_mapa = wb_mapa[tipo_preventivo]
+            # 4. Seleccionar la hoja (asegúrate de que tipo_preventivo sea int o str según corresponda)
+            hoja_mapa = wb_mapa[tipo_preventivo]
 
-                # 5. Iterar correctamente saltándose la cabecera (fila 0)
-                coincidencia_mapa = 0
-                for i, fila in enumerate(hoja_mapa.rows):
-                    if i == 0:
-                        continue  # Salta la cabecera
-                        
-                    pregunta_mapa = fila[0].value
-                    celda_mapa = fila[1].value
-                    nombre_hoja_preventivo = fila[3].value
-                    hoja_preventivo = wb_preventivos[nombre_hoja_preventivo]
-                    pregunta_preventivo = hoja_preventivo[celda_mapa].value
-                    if pregunta_mapa != pregunta_preventivo:
-                        coincidencia_mapa = 1
+            # 5. Iterar correctamente saltándose la cabecera (fila 0)
+            coincidencia_mapa = 0
+            for i, fila in enumerate(hoja_mapa.rows):
+                if i == 0:
+                    continue  # Salta la cabecera
+                    
+                pregunta_mapa = fila[0].value
+                celda_mapa = fila[1].value
+                nombre_hoja_preventivo = fila[3].value
+                hoja_preventivo = wb_preventivos[nombre_hoja_preventivo]
+                pregunta_preventivo = hoja_preventivo[celda_mapa].value
+                if pregunta_mapa != pregunta_preventivo:
+                    coincidencia_mapa = 1
 
-                if coincidencia_mapa == 0:
-                    # Devuelve éxito y el texto que quieres mostrar
-                    return jsonify({
-                        'success': True, 
-                        'message': 'Preventivo detectado correctamente, el mapa esta bien actualizado'
-                    })
+            if coincidencia_mapa == 0:
+                # Devuelve éxito y el texto que quieres mostrar
+                return jsonify({
+                    'success': True, 
+                    'message': 'Preventivo detectado correctamente, el mapa esta bien actualizado'
+                })
         else:
             return jsonify({
                 'success': False, 
