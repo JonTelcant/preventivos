@@ -1201,6 +1201,6 @@ def validar_archivo():
                 'error': f'Tipo de preventivo desconocido: {tipo_preventivo} -- {file.filename}'
             }), 400
 
-    return jsonify({'success': False, 'error': 'Formato incorrecto. Sube un archivo .xlsx'}), 400
+
 if __name__ == '__main__':
     app.run(debug=True)
