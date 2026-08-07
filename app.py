@@ -1153,14 +1153,13 @@ def validar_archivo():
         return jsonify({'success': False, 'error': 'No se seleccionó ningún archivo'}), 400
         
     if file and allowed_file(file.filename):
-        filename = secure_filename(file.filename)        
+        filename_preventivos = secure_filename(file.filename)        
         tipo_preventivo = obtener_tipo_preventivo(file.filename)
         if tipo_preventivo != "DESCONOCIDO":
             try:
         # 1. Guardar el archivo subido en el servidor antes de leerlo
-                filename_preventivos = secure_filename(file_preventivos.filename)
                 filepath_preventivos = os.path.join(app.config['UPLOAD_FOLDER'], filename_preventivos)
-                file_preventivos.save(filepath_preventivos)  # <-- ¡Importante: faltaba guardar el archivo!
+                file.save(filepath_preventivos)  # <-- ¡Importante: faltaba guardar el archivo!
 
                 # 2. Cargar el archivo de preventivos
                 wb_preventivos = openpyxl.load_workbook(filepath_preventivos)
