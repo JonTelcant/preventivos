@@ -1143,7 +1143,6 @@ def subir_preventivo():
 
 @app.route('/validar_preventivo', methods=['POST'])
 def validar_archivo():
-# Coincide con formData.append('file', file)
     if 'file' not in request.files:
         return jsonify({'success': False, 'error': 'No se encontró el archivo en la petición'}), 400
     
@@ -1155,11 +1154,12 @@ def validar_archivo():
     if file and allowed_file(file.filename):
         filename_preventivos = secure_filename(file.filename)        
         tipo_preventivo = obtener_tipo_preventivo(file.filename)
+        
         if tipo_preventivo != "DESCONOCIDO":
             try:
-        # 1. Guardar el archivo subido en el servidor antes de leerlo
+                # 1. Guardar el archivo subido en el servidor
                 filepath_preventivos = os.path.join(app.config['UPLOAD_FOLDER'], filename_preventivos)
-                file.save(filepath_preventivos)  # <-- ¡Importante: faltaba guardar el archivo!
+                file.save(filepath_preventivos)
 
                 # 2. Cargar el archivo de preventivos
                 wb_preventivos = openpyxl.load_workbook(filepath_preventivos)
@@ -1169,38 +1169,55 @@ def validar_archivo():
                 descargar_archivo_r2('mapa_preventivos.xlsx', 'preventivos', ruta_local)
                 wb_mapa = openpyxl.load_workbook(ruta_local)
 
-            except Exception as e:
-                 return f"CRASH DETECTADO: {str(e)}"  
+                # 4. Validar que la hoja del mapa exista
+                if tipo_preventivo not in wb_mapa.sheetnames:
+                    return jsonify({'success': False, 'error': f'La hoja "{tipo_preventivo}" no existe en el mapa de preventivos.'}), 400
 
-            # 4. Seleccionar la hoja (asegúrate de que tipo_preventivo sea int o str según corresponda)
-            hoja_mapa = wb_mapa[tipo_preventivo]
+                hoja_mapa = wb_mapa[tipo_preventivo]
 
-            # 5. Iterar correctamente saltándose la cabecera (fila 0)
-            coincidencia_mapa = 0
-            for i, fila in enumerate(hoja_mapa.rows):
-                if i == 0:
-                    continue  # Salta la cabecera
+                # 5. Iterar y validar
+                coincidencia_mapa = 0
+                for i, fila in enumerate(hoja_mapa.rows):
+                    if i == 0:
+                        continue  # Salta la cabecera
+                        
+                    pregunta_mapa = fila[0].value
+                    celda_mapa = fila[1].value
+                    nombre_hoja_preventivo = fila[3].value
                     
-                pregunta_mapa = fila[0].value
-                celda_mapa = fila[1].value
-                nombre_hoja_preventivo = fila[3].value
-                hoja_preventivo = wb_preventivos[nombre_hoja_preventivo]
-                pregunta_preventivo = hoja_preventivo[celda_mapa].value
-                if pregunta_mapa != pregunta_preventivo:
-                    coincidencia_mapa = 1
+                    # Validaciones defensivas para evitar que crashee si faltan datos en el Excel
+                    if not nombre_hoja_preventivo or not celda_mapa:
+                        continue 
 
-            if coincidencia_mapa == 0:
-                # Devuelve éxito y el texto que quieres mostrar
-                return jsonify({
-                    'success': True, 
-                    'message': 'Preventivo detectado correctamente, el mapa esta bien actualizado'
-                })
+                    if nombre_hoja_preventivo not in wb_preventivos.sheetnames:
+                        return jsonify({'success': False, 'error': f'La hoja "{nombre_hoja_preventivo}" referenciada en el mapa no existe en el archivo subido.'}), 400
+
+                    hoja_preventivo = wb_preventivos[nombre_hoja_preventivo]
+                    pregunta_preventivo = hoja_preventivo[celda_mapa].value
+                    
+                    if pregunta_mapa != pregunta_preventivo:
+                        coincidencia_mapa = 1
+
+                if coincidencia_mapa == 0:
+                    return jsonify({
+                        'success': True, 
+                        'message': 'Preventivo detectado correctamente, el mapa esta bien actualizado'
+                    })
+                else:
+                    return jsonify({
+                        'success': True, # O False dependiendo de tu lógica de negocio para discrepancias
+                        'message': 'Se encontraron diferencias entre el preventivo y el mapa.'
+                    })
+
+            except Exception as e:
+                # ¡CRUCIAL! Siempre devolver JSON para que el fetch/axios del frontend no falle con "Error de conexión"
+                return jsonify({'success': False, 'error': f'CRASH DETECTADO: {str(e)}'}), 500
+
         else:
             return jsonify({
                 'success': False, 
                 'error': f'Tipo de preventivo desconocido: {tipo_preventivo} -- {file.filename}'
             }), 400
-
 
 if __name__ == '__main__':
     app.run(debug=True)
