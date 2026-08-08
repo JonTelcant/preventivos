@@ -535,6 +535,7 @@ def guardar_configuracion_mapa(tipo_preventivo, configuraciones, info_especial):
     """
     try:  
         descargar_archivo_r2('mapa_preventivos.xlsx', 'preventivos', MAPA_FILE)
+        print("Archimo mapa_preventivos descargado del servidor")
         wb = openpyxl.load_workbook(MAPA_FILE)
         ws = wb[tipo_preventivo]
         
@@ -577,10 +578,12 @@ def guardar_configuracion_mapa(tipo_preventivo, configuraciones, info_especial):
             fila += 1
         
         wb.save(MAPA_FILE)
+        print("Archivo mapa_preventivos guardado correctamente en la carpeta temporal")
         wb.close()
         ruta_temporal = os.path.join(DOWNLOAD_FOLDER, "mapa_preventivos.xlsx")
         carpeta_destino = "preventivos"
         exito_r2, mensaje_r2 = subir_archivo_r2(ruta_temporal, 'mapa_preventivos.xlsx', carpeta_destino)
+        print ("Archivo mapa_preventivos subido correctamente al servidor")
         # Limpiar archivo temporal
         os.remove(ruta_temporal)
         return True, None
