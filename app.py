@@ -534,7 +534,7 @@ def guardar_configuracion_mapa(tipo_preventivo, configuraciones, info_especial):
     info_especial contiene información de ELEMENTO y HOJA VALIDADA
     """
     try:  
-        descargar_archivo_r2('mapa_preventivos.xlsx', 'preventivos', ruta_local)
+        descargar_archivo_r2('mapa_preventivos.xlsx', 'preventivos', MAPA_FILE)
         wb = openpyxl.load_workbook(MAPA_FILE)
         ws = wb[tipo_preventivo]
         
@@ -981,11 +981,11 @@ def upload_file():
         tipo_preventivo = obtener_tipo_preventivo(filename)
         
         # Asegurar mapa_preventivos.xlsx
-        exito, error_msg = asegurar_mapa_preventivos(tipo_preventivo)
-        if not exito:
-            os.remove(filepath)
-            flash(error_msg)
-            return redirect(url_for('index'))
+        #exito, error_msg = asegurar_mapa_preventivos(tipo_preventivo)
+        #if not exito:
+        #    os.remove(filepath)
+        #    flash(error_msg)
+        #    return redirect(url_for('index'))
         
         # Limpiar archivo temporal
         os.remove(filepath)
