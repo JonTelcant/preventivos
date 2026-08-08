@@ -361,13 +361,14 @@
         const celdasInfo = {{ celdas_info | tojson }};
         const infoEspecial = {{ info_especial | tojson if info_especial else '{}' }};
         
-        function updateValorOptions(select, index, esLista, listaValores, pregunta) {
+        function updateValorOptions(select, index) {
             const valorContainer = document.getElementById('valorContainer' + index);
             const config = select.value;
+            const celda = celdasInfo[index];
             
             if (config === 'defecto') {
-                // Verificar si es una pregunta especial y usar valor global
                 let valorGlobal = '';
+                const pregunta = celda.pregunta || '';
                 if (pregunta.includes('DNI/MATRICULA:')) {
                     valorGlobal = document.getElementById('dniMatricula').value;
                 } else if (pregunta.includes('EMPRESA REALIZACIÓN:')) {
@@ -376,9 +377,8 @@
                     valorGlobal = document.getElementById('telefono').value;
                 }
                 
-                if (esLista && listaValores) {
-                    // Crear select con los valores de la lista
-                    const valores = listaValores.split(',');
+                if (celda.es_lista && celda.lista_valores) {
+                    const valores = celda.lista_valores.split(',');
                     let html = '<select class="lista-select">';
                     valores.forEach(v => {
                         html += '<option value="' + v.trim() + '">' + v.trim() + '</option>';
@@ -386,11 +386,9 @@
                     html += '</select>';
                     valorContainer.innerHTML = html;
                 } else {
-                    // Input de texto
                     valorContainer.innerHTML = '<input type="text" class="valor-input" placeholder="Valor por defecto" value="' + valorGlobal + '">';
                 }
             } else if (config === 'rellenar') {
-                // Mostrar select con tipos de rellenar
                 let html = '<select class="lista-select rellenar-select">';
                 html += '<option value="">Seleccionar tipo...</option>';
                 html += '<option value="texto">Texto</option>';
@@ -400,7 +398,7 @@
                 html += '</select>';
                 valorContainer.innerHTML = html;
             } else if (config === 'lista') {
-                valorContainer.innerHTML = '<input type="text" class="valor-input" value="' + listaValores + '" readonly>';
+                valorContainer.innerHTML = '<input type="text" class="valor-input" value="' + (celda.lista_valores || '') + '" readonly>';
             } else {
                 valorContainer.innerHTML = '<input type="text" class="valor-input" placeholder="Valor por defecto" disabled>';
             }
@@ -423,13 +421,8 @@
                 const valorContainer = document.getElementById('valorContainer' + index);
                 let valor = '';
                 
-                if (select.value === 'defecto' || select.value === 'rellenar') {
+                if (select.value === 'defecto' || select.value === 'rellenar' || select.value === 'lista') {
                     const input = valorContainer.querySelector('.valor-input, .lista-select');
-                    if (input) {
-                        valor = input.value;
-                    }
-                } else if (select.value === 'lista') {
-                    const input = valorContainer.querySelector('.valor-input');
                     if (input) {
                         valor = input.value;
                     }
@@ -456,35 +449,35 @@
                     info_especial: infoEspecial
                 })
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Error en el servidor HTTP: ' + response.status);
+                }
+                return response.json();
+            })
             .then(data => {
                 loading.style.display = 'none';
                 if (data.success) {
                     successMessage.style.display = 'block';
                 } else {
-                    errorMessage.textContent = '❌ Error al guardar la configuración: ' + data.message;
+                    errorMessage.textContent = '❌ Error al guardar la configuración: ' + (data.message || 'Desconocido');
                     errorMessage.style.display = 'block';
                 }
             })
             .catch(error => {
                 loading.style.display = 'none';
-                errorMessage.textContent = '❌ Error al guardar la configuración: ' + error;
+                errorMessage.textContent = '❌ Error de red o script: ' + error.message;
                 errorMessage.style.display = 'block';
             });
         }
         
-        // Inicializar selects con valores por defecto
         document.addEventListener('DOMContentLoaded', function() {
             const rows = document.querySelectorAll('#preguntasTable tr');
             rows.forEach((row, index) => {
                 const select = row.querySelector('.config-select');
                 if (select && select.getAttribute('data-default')) {
                     select.value = select.getAttribute('data-default');
-                    // Disparar el evento onchange para actualizar el campo de valor
-                    const esLista = celdasInfo[index].es_lista;
-                    const listaValores = celdasInfo[index].lista_valores;
-                    const pregunta = celdasInfo[index].pregunta;
-                    updateValorOptions(select, index, esLista, listaValores, pregunta);
+                    updateValorOptions(select, index);
                 }
             });
         });
