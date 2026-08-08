@@ -585,12 +585,12 @@ def guardar_configuracion_mapa(tipo_preventivo, configuraciones, info_especial):
         wb.save(MAPA_FILE)
         print("Archivo mapa_preventivos guardado correctamente en la carpeta temporal")
         wb.close()
-        ruta_temporal = os.path.join(DOWNLOAD_FOLDER, "mapa_preventivos.xlsx")
+        #ruta_temporal = os.path.join(DOWNLOAD_FOLDER, "mapa_preventivos.xlsx")
         carpeta_destino = "preventivos"
         exito_r2, mensaje_r2 = subir_archivo_r2(MAPA_FILE, "mapa_preventivos.xlsx", carpeta_destino)
         print ("Archivo mapa_preventivos subido correctamente al servidor")
         # Limpiar archivo temporal
-        os.remove(ruta_temporal)
+        os.remove(MAPA_FILE)
         return True, None
     except PermissionError:
         return False, "El archivo mapa_preventivos.xlsx está abierto en otro programa. Por favor, ciérralo antes de continuar."
