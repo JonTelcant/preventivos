@@ -582,7 +582,7 @@ def guardar_configuracion_mapa(tipo_preventivo, configuraciones, info_especial):
         wb.close()
         ruta_temporal = os.path.join(DOWNLOAD_FOLDER, "mapa_preventivos.xlsx")
         carpeta_destino = "preventivos"
-        exito_r2, mensaje_r2 = subir_archivo_r2(ruta_temporal, 'mapa_preventivos.xlsx', carpeta_destino)
+        exito_r2, mensaje_r2 = subir_archivo_r2(MAPA_FILE, 'mapa_preventivos.xlsx', carpeta_destino)
         print ("Archivo mapa_preventivos subido correctamente al servidor")
         # Limpiar archivo temporal
         os.remove(ruta_temporal)
