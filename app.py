@@ -533,7 +533,8 @@ def guardar_configuracion_mapa(tipo_preventivo, configuraciones, info_especial):
     - valor
     info_especial contiene información de ELEMENTO y HOJA VALIDADA
     """
-    try:
+    try:  
+        descargar_archivo_r2('mapa_preventivos.xlsx', 'preventivos', ruta_local)
         wb = openpyxl.load_workbook(MAPA_FILE)
         ws = wb[tipo_preventivo]
         
@@ -577,6 +578,11 @@ def guardar_configuracion_mapa(tipo_preventivo, configuraciones, info_especial):
         
         wb.save(MAPA_FILE)
         wb.close()
+        ruta_temporal = os.path.join(DOWNLOAD_FOLDER, "mapa_preventivos.xlsx")
+        carpeta_destino = "preventivos"
+        exito_r2, mensaje_r2 = subir_archivo_r2(ruta_temporal, "mapa_preventivos.xlsx", carpeta_destino)
+        # Limpiar archivo temporal
+        os.remove(ruta_temporal)
         return True, None
     except PermissionError:
         return False, "El archivo mapa_preventivos.xlsx está abierto en otro programa. Por favor, ciérralo antes de continuar."
