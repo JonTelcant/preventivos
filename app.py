@@ -464,7 +464,7 @@ def analizar_archivo_excel(ruta_archivo):
                         
                         celdas_info.append({
                             'pregunta': pregunta_texto,
-                            'coord_celda': cell.coordinate,
+                            'coord_celda': pregunta_coord,
                             'coord_respuesta': coord_respuesta,
                             'es_lista': es_lista,
                             'lista_valores': lista_valores,
