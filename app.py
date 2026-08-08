@@ -536,6 +536,11 @@ def guardar_configuracion_mapa(tipo_preventivo, configuraciones, info_especial):
     try:  
         descargar_archivo_r2('mapa_preventivos.xlsx', 'preventivos', MAPA_FILE)
         print("Archimo mapa_preventivos descargado del servidor")
+        if os.path.exists(MAPA_FILE):
+            print(f"El archivo existe. Ruta absoluta: {os.path.abspath(MAPA_FILE)}")
+            print(f"Tamaño del archivo en bytes: {os.path.getsize(MAPA_FILE)}")
+        else:
+            print("¡El archivo NO se encuentra en el disco!")
         wb = openpyxl.load_workbook(MAPA_FILE)
         ws = wb[tipo_preventivo]
         
