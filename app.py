@@ -1236,7 +1236,7 @@ def validar_archivo():
                     hoja_preventivo = wb_preventivos[nombre_hoja_preventivo]
                     pregunta_preventivo = hoja_preventivo[celda_mapa].value
                     respuesta = hoja_preventivo[celda_respuesta].value
-                    print (f"{pregunta_preventivo} == {respuesta}")
+                    print (f"Pregunta es mapa es {pregunta_mapa} y la pregunta en el preventivo es {pregunta_preventivo}. La respuesta es {respuesta}")
                     if pregunta_mapa != pregunta_preventivo:
                         print(f"Pregunta mapa = {pregunta_mapa} y pregunta preventivo = {pregunta_preventivo}")
                         coincidencia_mapa = 1
@@ -1244,7 +1244,7 @@ def validar_archivo():
 
                     match pregunta_mapa:
 
-                        case "FECHA PREVENTIVO:":                        
+                        case "FECHA PRUEBA:":                        
                             aino = respuesta[-4:]
 
                         case "ELEMENTO:":
