@@ -1236,6 +1236,9 @@ def validar_archivo():
                     hoja_preventivo = wb_preventivos[nombre_hoja_preventivo]
                     pregunta_preventivo = hoja_preventivo[celda_mapa].value
                     respuesta = hoja_preventivo[celda_respuesta].value
+                    aino = ""
+                    elemento = ""
+                    validacion = ""
 
                     match pregunta_mapa:
 
