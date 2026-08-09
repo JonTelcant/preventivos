@@ -1188,11 +1188,11 @@ def descargar_archivo_por_elemento(nombre_bucket, elemento_buscado, ruta_destino
     # Inicializas tu cliente de R2 (usa tus credenciales reales)
     s3_client = boto3.client(
         's3',
-        endpoint_url='https://<TU_ACCOUNT_ID>.r2.cloudflarestorage.com',
-        aws_access_key_id='TU_ACCESS_KEY',
-        aws_secret_access_key='TU_SECRET_KEY',
+        endpoint_url=R2_ENDPOINT,
+        aws_access_key_id=R2_ACCESS_KEY_ID,
+        aws_secret_access_key=R2_SECRET_ACCESS_KEY,
         region_name='auto'
-    )
+)
 
     try:
         # 1. Listamos todos los archivos del bucket (o de una carpeta específica con Prefix)
