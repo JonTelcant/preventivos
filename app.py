@@ -574,12 +574,26 @@ def guardar_configuracion_mapa(tipo_preventivo, configuraciones, info_especial):
         
         # Escribir configuraciones de preguntas
         for config in configuraciones:
+            # Escribir las primeras 5 columnas de forma normal
             ws.cell(row=fila, column=1, value=config['pregunta'])
             ws.cell(row=fila, column=2, value=config['coord_celda'])
             ws.cell(row=fila, column=3, value=config['coord_respuesta'])
             ws.cell(row=fila, column=4, value=config['hoja'])
-            ws.cell(row=fila, column=5, value=config['config'])
-            ws.cell(row=fila, column=6, value=config.get('valor', ''))
+            
+            tipo_config = config['config']
+            ws.cell(row=fila, column=5, value=tipo_config)
+            
+            valor_raw = config.get('valor', '')
+            
+            # Condición: solo separar por comas si el tipo de config es 'lista'
+            if tipo_config == 'lista' and valor_raw:
+                lista_valores = [v.strip() for v in valor_raw.split(',')]
+                
+                for i, val in enumerate(lista_valores):
+                    ws.cell(row=fila, column=6 + i, value=val)
+            else:
+                ws.cell(row=fila, column=6, value=valor_raw)
+            
             fila += 1
         
         wb.save(MAPA_FILE)
