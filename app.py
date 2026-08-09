@@ -1236,15 +1236,12 @@ def validar_archivo():
                     hoja_preventivo = wb_preventivos[nombre_hoja_preventivo]
                     pregunta_preventivo = hoja_preventivo[celda_mapa].value
                     respuesta = hoja_preventivo[celda_respuesta].value
-                    aino = ""
-                    elemento = ""
-                    validacion = ""
+                    if pregunta_mapa != pregunta_preventivo:
+                        print(f"Pregunta mapa = {pregunta_mapa} y pregunta preventivo = {pregunta_preventivo}")
+                        coincidencia_mapa = 1
+                        continue
 
                     match pregunta_mapa:
-
-                        case x if x != pregunta_preventivo:
-                            print(f"Pregunta mapa = {pregunta_mapa} y pregunta preventivo = {pregunta_preventivo}")
-                            coincidencia_mapa = 1
 
                         case "FECHA PREVENTIVO:":                        
                             aino = respuesta[-4:]
