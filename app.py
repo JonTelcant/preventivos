@@ -1237,7 +1237,7 @@ def validar_archivo():
                     pregunta_preventivo = hoja_preventivo[celda_mapa].value
                     respuesta = hoja_preventivo[celda_respuesta].value
 
-                    match preguntas_mapa:
+                    match pregunta_mapa:
 
                         case x if x != pregunta_preventivo:
                             print(f"Pregunta mapa = {pregunta_mapa} y pregunta preventivo = {pregunta_preventivo}")
