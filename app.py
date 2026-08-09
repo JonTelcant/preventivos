@@ -1181,6 +1181,51 @@ def guardar_respuestas():
 def subir_preventivo():
     return render_template("subir_preventivo.html")
 
+import boto3
+import os
+
+def descargar_archivo_por_elemento(nombre_bucket, elemento_buscado, ruta_destino):
+    # Inicializas tu cliente de R2 (usa tus credenciales reales)
+    s3_client = boto3.client(
+        's3',
+        endpoint_url='https://<TU_ACCOUNT_ID>.r2.cloudflarestorage.com',
+        aws_access_key_id='TU_ACCESS_KEY',
+        aws_secret_access_key='TU_SECRET_KEY',
+        region_name='auto'
+    )
+
+    try:
+        # 1. Listamos todos los archivos del bucket (o de una carpeta específica con Prefix)
+        response = s3_client.list_objects_v2(Bucket=nombre_bucket)
+
+        if 'Contents' not in response:
+            print("El bucket está vacío.")
+            return False
+
+        archivo_encontrado = None
+
+        # 2. Recorremos los archivos buscando el que contenga la variable 'elemento'
+        for obj in response['Contents']:
+            nombre_archivo_en_nube = obj['Key'] # Ej: "reporte_2600123_final.xlsx"
+            
+            # Comprobamos si los dígitos de 'elemento' están dentro del nombre del archivo
+            if str(elemento_buscado) in nombre_archivo_en_nube:
+                archivo_encontrado = nombre_archivo_en_nube
+                break # Encontró la coincidencia, salimos del bucle
+
+        # 3. Si lo encontramos, lo descargamos
+        if archivo_encontrado:
+            print(f"¡Archivo encontrado: {archivo_encontrado}! Descargando...")
+            s3_client.download_file(nombre_bucket, archivo_encontrado, ruta_destino)
+            return True
+        else:
+            print(f"No se encontró ningún archivo que contenga los dígitos: {elemento_buscado}")
+            return False
+
+    except Exception as e:
+        print(f"Error al buscar/descargar el archivo: {e}")
+        return False
+
 @app.route('/validar_preventivo', methods=['POST'])
 def validar_archivo():
     if 'file' not in request.files:
@@ -1249,16 +1294,30 @@ def validar_archivo():
 
                         case "ELEMENTO:":
                             elemento = respuesta[:7]
-
-                        case "HOJA VALIDADA:":
-
-                            validacion = respuesta
                 
                 if coincidencia_mapa == 0:
 
+                    # Supongamos que ya procesaste tu archivo y extrajiste esto:
+                    # elemento = "2600123"
+
+                    ruta_local_descargada = os.path.join(app.config['UPLOAD_FOLDER'], f"preventivo_{elemento}.xlsx")
+
+                    # Llamas a la función de búsqueda y descarga
+                    encontrado = descargar_archivo_por_elemento(
+                        nombre_bucket='preventivos', 
+                        elemento_buscado=elemento, 
+                        ruta_destino=ruta_local_descargada
+                    )
+
+                    if encontrado:
+                        # Continuas tu proceso leyendo 'ruta_local_descargada' con openpyxl
+                        wb_preventivos = openpyxl.load_workbook(ruta_local_descargada)
+                    else:
+                        return jsonify({'success': False, 'error': f'No se encontró un archivo en R2 para el elemento {elemento}'}), 404
+
                     return jsonify({
                         'success': True, 
-                        'message': f"Aino = {aino}, elemnto = {elemento} y validacion = {validacion}"
+                        'message': f"Aino = {aino}, elemnto = {elemento}"
                     })
 
                 else:
