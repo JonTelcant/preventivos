@@ -370,11 +370,11 @@
                 let valorGlobal = '';
                 const pregunta = celda.pregunta || '';
                 if (pregunta.includes('DNI/MATRICULA:')) {
-                    valorGlobal = document.getElementById('dniMatricula').value;
+                    valorGlobal = 'E684827'; // Reemplaza aquí tu valor fijo para DNI/Matícula
                 } else if (pregunta.includes('EMPRESA REALIZACIÓN:')) {
-                    valorGlobal = document.getElementById('empresaRealizacion').value;
+                    valorGlobal = 'Telcant'; // Reemplaza aquí tu valor fijo para la empresa
                 } else if (pregunta.includes('TELÉFONO:')) {
-                    valorGlobal = document.getElementById('telefono').value;
+                    valorGlobal = '625010621'; // Reemplaza aquí tu valor fijo para el teléfono
                 }
                 
                 if (celda.es_lista && celda.lista_valores) {
