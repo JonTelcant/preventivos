@@ -385,7 +385,7 @@ def analizar_archivo_excel(ruta_archivo):
         # Buscar HOJA VALIDADA en Maestra y Hija1
         for nombre_hoja in hojas_a_analizar:
             ws = wb[nombre_hoja]
-            hoja_validada_info = buscar_celda_por_texto(ws, 'HOJA VALIDADA')
+            hoja_validada_info = buscar_celda_por_texto(ws, 'HOJA VALIDADA:')
             if hoja_validada_info:
                 hoja_validada_info['hoja'] = nombre_hoja
                 info_especial['hoja_validada'].append(hoja_validada_info)
