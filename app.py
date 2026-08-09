@@ -1172,7 +1172,7 @@ def validar_archivo():
         if tipo_preventivo != "DESCONOCIDO":
             try:
                 # 1. Guardar el archivo subido en el servidor
-                filepath_preventivos = os.path.join(app.config['filename_preventivos'], filename_preventivos)
+                filepath_preventivos = os.path.join(app.config['UPLOAD_FOLDER'], filename_preventivos)
                 file.save(filepath_preventivos)
 
                 # 2. Cargar el archivo de preventivos
