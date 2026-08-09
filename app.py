@@ -362,6 +362,7 @@ def analizar_archivo_excel(ruta_archivo):
     celdas_info = []
     info_especial = {
         'elemento': None,
+        'fecha_prueba': None,
         'hoja_validada': []
     }
     
@@ -381,6 +382,7 @@ def analizar_archivo_excel(ruta_archivo):
         # Buscar ELEMENTO: siempre en Maestra
         ws_maestra = wb['Maestra']
         info_especial['elemento'] = buscar_celda_por_texto(ws_maestra, 'ELEMENTO:')
+        info_especial['fecha_prueba'] = buscar_celda_por_texto(ws_maestra, 'FECHA PRUEBA:')
         
         # Buscar HOJA VALIDADA en Maestra y Hija1
         for nombre_hoja in hojas_a_analizar:
@@ -554,6 +556,16 @@ def guardar_configuracion_mapa(tipo_preventivo, configuraciones, info_especial):
         # Primero agregar información especial (ELEMENTO y HOJA VALIDADA)
         if info_especial and info_especial.get('elemento'):
             elem = info_especial['elemento']
+            ws.cell(row=fila, column=1, value=elem['texto'])
+            ws.cell(row=fila, column=2, value=elem['coord'])
+            ws.cell(row=fila, column=3, value=elem['coord_derecha'])
+            ws.cell(row=fila, column=4, value='Maestra')
+            ws.cell(row=fila, column=5, value='INFO')
+            ws.cell(row=fila, column=6, value='')  # No guardar valor
+            fila += 1
+
+        if info_especial and info_especial.get('fecha_prueba'):
+            elem = info_especial['fecha_prueba']
             ws.cell(row=fila, column=1, value=elem['texto'])
             ws.cell(row=fila, column=2, value=elem['coord'])
             ws.cell(row=fila, column=3, value=elem['coord_derecha'])
