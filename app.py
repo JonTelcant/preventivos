@@ -1223,6 +1223,7 @@ def validar_archivo():
                         
                     pregunta_mapa = fila[0].value
                     celda_mapa = fila[1].value
+                    celda_respuesta = fila[2].value
                     nombre_hoja_preventivo = fila[3].value
                     
                     # Validaciones defensivas para evitar que crashee si faltan datos en el Excel
@@ -1234,16 +1235,31 @@ def validar_archivo():
 
                     hoja_preventivo = wb_preventivos[nombre_hoja_preventivo]
                     pregunta_preventivo = hoja_preventivo[celda_mapa].value
-                    
-                    if pregunta_mapa != pregunta_preventivo:
-                        print(f"Pregunta mapa = {pregunta_mapa} y pregunta preventivo = {pregunta_preventivo}")
-                        coincidencia_mapa = 1
+                    respuesta = hoja_preventivo[celda_respuesta].value
 
+                    match preguntas_mapa:
+
+                        case x if x != pregunta_preventivo:
+                            print(f"Pregunta mapa = {pregunta_mapa} y pregunta preventivo = {pregunta_preventivo}")
+                            coincidencia_mapa = 1
+
+                        case "FECHA PREVENTIVO:":                        
+                            aino = respuesta[-4:]
+
+                        case "ELEMENTO:":
+                            elemento = respuesta[:7]
+
+                        case "HOJA VALIDADA:":
+
+                            validacion = respuesta
+                
                 if coincidencia_mapa == 0:
+
                     return jsonify({
                         'success': True, 
-                        'message': 'Preventivo detectado correctamente, el mapa esta bien actualizado'
+                        'message': f"Aino = {aino}, elemnto = {elemento} y validacion = {validacion}"
                     })
+
                 else:
                     return jsonify({
                         'success': True, # O False dependiendo de tu lógica de negocio para discrepancias
