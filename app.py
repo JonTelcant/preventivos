@@ -1301,7 +1301,7 @@ def validar_archivo():
                     # elemento = "2600123"
 
                     ruta_local_descargada = os.path.join(app.config['UPLOAD_FOLDER'], f"preventivo_{elemento}.xlsx")
-                    ruta = f"prevenyivos/gipuzcoa/{aino}"
+                    ruta = f"preventivos/gipuzcoa/{aino}"
                     # Llamas a la función de búsqueda y descarga
                     encontrado = descargar_archivo_por_elemento(
                         nombre_bucket=ruta, 
