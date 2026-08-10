@@ -1184,7 +1184,7 @@ def subir_preventivo():
 import boto3
 import os
 
-def descargar_archivo_por_elemento(nombre_bucket, elemento_buscado, ruta_destino):
+def descargar_archivo_por_elemento(nombre_bucket, elemento_buscado, ruta_destino,aino):
     # Inicializas tu cliente de R2 (usa tus credenciales reales)
     s3_client = boto3.client(
         's3',
@@ -1301,12 +1301,12 @@ def validar_archivo():
                     # elemento = "2600123"
 
                     ruta_local_descargada = os.path.join(app.config['UPLOAD_FOLDER'], f"preventivo_{elemento}.xlsx")
-
+                    ruta = f"prevenyivos/gipuzcoa/{aino}"
                     # Llamas a la función de búsqueda y descarga
                     encontrado = descargar_archivo_por_elemento(
-                        nombre_bucket='preventivos', 
+                        nombre_bucket=ruta, 
                         elemento_buscado=elemento, 
-                        ruta_destino=ruta_local_descargada
+                        ruta_destino=ruta_local_descargada,
                     )
 
                     if encontrado:
