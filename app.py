@@ -1184,7 +1184,7 @@ def subir_preventivo():
 import boto3
 import os
 
-def descargar_archivo_por_elemento(nombre_bucket, elemento_buscado, ruta_destino,aino):
+def descargar_archivo_por_elemento(nombre_bucket, elemento_buscado, ruta_destino):
     # Inicializas tu cliente de R2 (usa tus credenciales reales)
     s3_client = boto3.client(
         's3',
