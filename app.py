@@ -1184,7 +1184,7 @@ def subir_preventivo():
 import boto3
 import os
 
-def descargar_archivo_por_elemento(nombre_bucket, elemento_buscado, ruta_destino):
+def descargar_archivo_por_elemento(nombre_bucket, elemento_buscado, ruta_destino, ruta):
     # Inicializas tu cliente de R2 (usa tus credenciales reales)
     s3_client = boto3.client(
         's3',
@@ -1196,7 +1196,7 @@ def descargar_archivo_por_elemento(nombre_bucket, elemento_buscado, ruta_destino
 
     try:
         # 1. Listamos todos los archivos del bucket (o de una carpeta específica con Prefix)
-        response = s3_client.list_objects_v2(Bucket=nombre_bucket)
+        response = s3_client.list_objects_v2(Bucket=nombre_bucket, Prefix=ruta)
 
         if 'Contents' not in response:
             print("El bucket está vacío.")
@@ -1304,9 +1304,10 @@ def validar_archivo():
                     ruta = f"preventivos/gipuzcoa/{aino}"
                     # Llamas a la función de búsqueda y descarga
                     encontrado = descargar_archivo_por_elemento(
-                        nombre_bucket=ruta, 
+                        nombre_bucket="preventivos", 
                         elemento_buscado=elemento, 
                         ruta_destino=ruta_local_descargada,
+                        ruta=ruta
                     )
 
                     if encontrado:
