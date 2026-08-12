@@ -1242,9 +1242,13 @@ def validar_archivo():
         
         if tipo_preventivo != "DESCONOCIDO":
             try:
+                # Si la carpeta no existe, créala
+                if not os.path.exists(app.config['UPLOAD_FOLDER']):
+                    os.makedirs(app.config['UPLOAD_FOLDER'])
                 # 1. Guardar el archivo subido en el servidor
                 filepath_preventivos = os.path.join(app.config['UPLOAD_FOLDER'], filename_preventivos)
                 file.save(filepath_preventivos)
+                print(f"Ruta del archivo en el servidor {filepath_preventivos}")
 
                 # 2. Cargar el archivo de preventivos
                 wb_preventivos = openpyxl.load_workbook(filepath_preventivos)
@@ -1327,12 +1331,12 @@ def validar_archivo():
                                     hoja_preventivo[celda].value = respuesta
                                     print(f"{pregunta} = {respuesta}")
                                 
-                            wb_preventivos.save
-                            wb_preventivos.close
-                            wb_mapa.close
-                            wb_respuestas.close
-                            print(f"Ruta del archivo en el servidor = {file.filename}\n Nombre del archivo a descargar = {file.filename}")
-                            return send_file(file.filename, as_attachment=True, download_name=file.filename)                            
+                            wb_preventivos.save(filepath_preventivos) 
+                            wb_preventivos.close()
+                            wb_mapa.close()
+                            wb_respuestas.close()
+                            print(f"Ruta del archivo en el servidor = {filepath_preventivos}\n Nombre del archivo a descargar = {file.filename}")
+                            return send_file(filepath_preventivos, as_attachment=True, download_name=file.filename)                            
                             #return jsonify({'success': False, 'error': f'Se encontró la hoja {tipo_preventivo} en la respuestas'}), 404
                         else:
                             return jsonify({'success': False, 'error': f'No se encontró la hoja {tipo_preventivo} en la respuestas'}), 404
