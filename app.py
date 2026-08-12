@@ -1332,6 +1332,7 @@ def validar_archivo():
                                     hoja_preventivo[celda].value = respuesta
                                     print(f"{pregunta} = {respuesta}")
                                 
+                            wb_preventivos.properties.fullCalcOnLoad = True
                             wb_preventivos.save(filepath_preventivos) 
                             wb_preventivos.close()
                             wb_mapa.close()
