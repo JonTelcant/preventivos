@@ -1331,8 +1331,8 @@ def validar_archivo():
                             wb_preventivos.close
                             wb_mapa.close
                             wb_respuestas.close
-                            print(f"Ruta del archivo en el servidor = {ruta_local_descargada}\n Nombre del archivo a descargar = {filename_preventivos}")
-                            return send_file(ruta_local_descargada, as_attachment=True, download_name=filename_preventivos)                            
+                            print(f"Ruta del archivo en el servidor = {ruta_local_descargada}\n Nombre del archivo a descargar = {file.filename}")
+                            return send_file(ruta_local_descargada, as_attachment=True, download_name=file.filename)                            
                             #return jsonify({'success': False, 'error': f'Se encontró la hoja {tipo_preventivo} en la respuestas'}), 404
                         else:
                             return jsonify({'success': False, 'error': f'No se encontró la hoja {tipo_preventivo} en la respuestas'}), 404
