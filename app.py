@@ -1313,8 +1313,10 @@ def validar_archivo():
                     if encontrado:
                         # Continuas tu proceso leyendo 'ruta_local_descargada' con openpyxl
                         wb_respuestas = openpyxl.load_workbook(ruta_local_descargada)
+                        print(f"{ruta_local_descargada} habierto correctamente")
                         if tipo_preventivo in wb_respuestas.sheetnames:
                             hoja_respuestas = wb_respuestas[tipo_preventivo]
+                            print(f"Hoja {tipo_preventivo} asignado correctamente")
                             for fila in hoja_respuestas.rows:
                                 pregunta = fila[0].value
                                 if pregunta != "Pregunta" and pregunta != "ELEMENTO:" and pregunta != "HOJA VALIDADA":
@@ -1323,6 +1325,7 @@ def validar_archivo():
                                     celda = fila[2].value
                                     hoja_preventivo = wb_preventivos[hoja]
                                     hoja_preventivo[celda].value = respuesta
+                                    print(f"{pregunta} = {respuesta}")
                                 
                             wb_preventivos.save
                             wb_preventivos.close
