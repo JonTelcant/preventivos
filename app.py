@@ -1323,7 +1323,8 @@ def validar_archivo():
                             print(f"Hoja {tipo_preventivo} asignado correctamente")
                             for fila in hoja_respuestas.rows:
                                 pregunta = fila[0].value
-                                if pregunta != "Pregunta" and pregunta != "ELEMENTO:" and pregunta != "HOJA VALIDADA":
+                                accion = fila[4].value
+                                if pregunta != "Pregunta" and pregunta != "ELEMENTO:" and pregunta != "HOJA VALIDADA:" and accion != "ignorar":
                                     respuesta = fila[5].value
                                     hoja = fila[3].value
                                     celda = fila[2].value
