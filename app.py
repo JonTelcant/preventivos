@@ -1314,7 +1314,22 @@ def validar_archivo():
                         # Continuas tu proceso leyendo 'ruta_local_descargada' con openpyxl
                         wb_respuestas = openpyxl.load_workbook(ruta_local_descargada)
                         if tipo_preventivo in wb_respuestas.sheetnames:
-                            return jsonify({'success': False, 'error': f'Se encontró la hoja {tipo_preventivo} en la respuestas'}), 404
+                            hoja_respuestas = wb_respuestas[tipo_preventivo]
+                            for fila in hoja_respuestas.rows:
+                                pregunta = fila[0].value
+                                if pregunta != "Pregunta" and pregunta != "ELEMENTO:" and pregunta != "HOJA VALIDADA":
+                                    respuesta = fila[4].value
+                                    hoja = fila[3].value
+                                    celda = fila[2].value
+                                    hoja_preventivo = wb_preventivos[hoja]
+                                    hoja_preventivo[celda].value = respuesta
+                                
+                            wb_preventivos.save
+                            wb_preventivos.close
+                            wb_mapa.close
+                            wb_respuestas.close
+                            return send_file(ruta_local_descargada, as_attachment=True, download_name=filename_preventivos)                            
+                            #return jsonify({'success': False, 'error': f'Se encontró la hoja {tipo_preventivo} en la respuestas'}), 404
                         else:
                             return jsonify({'success': False, 'error': f'No se encontró la hoja {tipo_preventivo} en la respuestas'}), 404
                     else:

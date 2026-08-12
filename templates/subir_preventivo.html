@@ -253,5 +253,10 @@
             fileButton.textContent = '📁 Seleccionar archivo Excel';
             submitBtn.disabled = true;
         }
+
+    function descargarArchivo() {
+        // El navegador detectará la cabecera "attachment" e iniciará la descarga automáticamente
+        window.location.href = '/subir_preventivo';
+    }
     });
 </script>
