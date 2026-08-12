@@ -179,7 +179,7 @@
         const fileInput = document.getElementById('fileInput');
         const fileNameDiv = document.getElementById('fileName');
 
-        // Si tu input de archivo está oculto con CSS, esto hace que al hacer clic en el botón se abra el selector
+        // Abrir el selector de archivos al hacer clic en el botón personalizado
         fileButton.addEventListener('click', function() {
             fileInput.click();
         });
@@ -187,76 +187,62 @@
         // Cuando el usuario selecciona un archivo
         fileInput.addEventListener('change', async function(event) {
             const file = event.target.files[0];
-            if (!file) return;
+            if (!file) {
+                fileNameDiv.textContent = '';
+                fileButton.textContent = '📁 Seleccionar archivo Excel';
+                return;
+            }
 
-            // Mostrar el nombre del archivo seleccionado opcionalmente
             fileNameDiv.textContent = `Archivo seleccionado: ${file.name}`;
+            fileButton.textContent = '📁 Cambiar archivo';
 
-            // Preparar el envío por AJAX (Fetch)
+            // Preparar el envío por Fetch (FormData)
             const formData = new FormData();
-            formData.append('file', file); // Usamos 'file' porque es el name de tu input HTML
+            formData.append('file', file); // 'file' coincide con el backend
 
             try {
-                // Cambia '/validar-archivo' por la ruta de tu app en Flask
+                // Hacemos la petición a Flask
                 const response = await fetch('/validar_preventivo', {
                     method: 'POST',
                     body: formData
                 });
 
-                const data = await response.json();
-
-                if (response.ok && data.success) {
-                    // Aquí manejas lo que pasa si el archivo es correcto (puedes inyectar HTML, mostrar tablas, etc.)
-                    fileNameDiv.innerHTML += `<br><span style="color: green;">${data.message}</span>`;
-                } else {
-                    // Si hay un error de validación
-                    fileNameDiv.innerHTML += `<br><span style="color: red;">${data.error}</span>`;
+                if (!response.ok) {
+                    throw new Error('Error en el servidor al procesar el archivo.');
                 }
+
+                // 🌟 AQUÍ ESTÁ LA CLAVE: Verificamos si Flask devolvió un archivo o un JSON de error
+                const contentType = response.headers.get('content-type');
+
+                if (contentType && contentType.includes('application/json')) {
+                    // Si Flask devolvió un JSON (por ejemplo, un error de validación)
+                    const data = await response.json();
+                    fileNameDiv.innerHTML += `<br><span style="color: red;">${data.error || 'Error desconocido'}</span>`;
+                } else {
+                    // Si Flask devolvió el archivo (send_file), lo convertimos en Blob para descargarlo
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+
+                    // Creamos un enlace temporal invisible para forzar la descarga
+                    const a = document.createElement('a');
+                    a.href = url;
+                    
+                    // Usamos el nombre del archivo original o uno personalizado
+                    a.download = file.name; 
+                    document.body.appendChild(a);
+                    a.click();
+                    
+                    // Limpieza de memoria
+                    a.remove();
+                    window.URL.revokeObjectURL(url);
+
+                    fileNameDiv.innerHTML += `<br><span style="color: green; font-weight: bold;">¡Archivo procesado y descargado con éxito!</span>`;
+                }
+
             } catch (error) {
                 console.error('Error en la petición:', error);
                 fileNameDiv.innerHTML += `<br><span style="color: red;">Error de conexión con el servidor.</span>`;
             }
         });
-    });
-
-    fileInput.addEventListener('change', async function(e) {
-        if (e.target.files.length > 0) {
-            const file = e.target.files[0];
-            fileName.textContent = 'Archivo seleccionado: ' + file.name;
-            
-            // Preparamos el envío por fetch
-            const formData = new FormData();
-            formData.append('file', file);
-
-            try {
-                const response = await fetch('/validar-archivo', {
-                    method: 'POST',
-                    body: formData
-                });
-
-                const data = await response.json();
-
-                if (response.ok && data.success) {
-                    // AQUí SE IMPRIME EL MENSAJE EN LA WEB COMO PRUEBA
-                    fileName.innerHTML += `<br><span style="color: green; font-weight: bold;">${data.message}</span>`;
-                    fileButton.textContent = '📁 Cambiar archivo';
-                    submitBtn.disabled = false;
-                } else {
-                    fileName.innerHTML += `<br><span style="color: red;">${data.error}</span>`;
-                    submitBtn.disabled = true;
-                }
-            } catch (error) {
-                console.error('Error:', error);
-            }
-        } else {
-            fileName.textContent = '';
-            fileButton.textContent = '📁 Seleccionar archivo Excel';
-            submitBtn.disabled = true;
-        }
-
-    function descargarArchivo() {
-        // El navegador detectará la cabecera "attachment" e iniciará la descarga automáticamente
-        window.location.href = '/subir_preventivo';
-    }
     });
 </script>
