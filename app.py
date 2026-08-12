@@ -1320,7 +1320,7 @@ def validar_archivo():
                             for fila in hoja_respuestas.rows:
                                 pregunta = fila[0].value
                                 if pregunta != "Pregunta" and pregunta != "ELEMENTO:" and pregunta != "HOJA VALIDADA":
-                                    respuesta = fila[4].value
+                                    respuesta = fila[5].value
                                     hoja = fila[3].value
                                     celda = fila[2].value
                                     hoja_preventivo = wb_preventivos[hoja]
@@ -1331,6 +1331,7 @@ def validar_archivo():
                             wb_preventivos.close
                             wb_mapa.close
                             wb_respuestas.close
+                            print(f"Ruta del archivo en el servidor = {ruta_local_descargada}\n Nombre del archivo a descargar = {filename_preventivos}")
                             return send_file(ruta_local_descargada, as_attachment=True, download_name=filename_preventivos)                            
                             #return jsonify({'success': False, 'error': f'Se encontró la hoja {tipo_preventivo} en la respuestas'}), 404
                         else:
