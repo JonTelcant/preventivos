@@ -603,6 +603,9 @@ def guardar_configuracion_mapa(tipo_preventivo, configuraciones, info_especial):
                 
                 for i, val in enumerate(lista_valores):
                     ws.cell(row=fila, column=6 + i, value=val)
+            elif tipo_config == 'numero' and valor_raw:
+                valor_raw = float(valor_raw)
+                ws.cell(row=fila, column=6, value=valor_raw)
             else:
                 ws.cell(row=fila, column=6, value=valor_raw)
             
