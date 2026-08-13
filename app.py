@@ -1301,7 +1301,7 @@ def validar_archivo():
                             if tipo_preventivo !="OC":
                                 aino = respuesta[-4:]
                             else:
-                                aino = respuesta[:4]
+                                aino = str(respuesta)[:4]
                             print(f"El año del preventivo es {aino}")
 
                         case "ELEMENTO:":
