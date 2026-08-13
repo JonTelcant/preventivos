@@ -1296,7 +1296,8 @@ def validar_archivo():
 
                     match pregunta_mapa:
 
-                        case "FECHA PRUEBA:":                        
+                        case "FECHA PRUEBA:":    
+                            print("Encuenta la pregunta FECHA PRUEBA:")                    
                             if tipo_preventivo !="OC":
                                 aino = respuesta[-4:]
                             else:
