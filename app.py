@@ -1297,7 +1297,10 @@ def validar_archivo():
                     match pregunta_mapa:
 
                         case "FECHA PRUEBA:":                        
-                            aino = respuesta[-4:]
+                            if tipo_preventivo !="OC":
+                                aino = respuesta[-4:]
+                            else:
+                                aino = respuesta[:4]
                             print(f"El año del preventivo es {aino}")
 
                         case "ELEMENTO:":
@@ -1331,7 +1334,7 @@ def validar_archivo():
                             for fila in hoja_respuestas.rows:
                                 pregunta = fila[0].value
                                 accion = fila[4].value
-                                if pregunta != "Pregunta" and pregunta != "ELEMENTO:" and pregunta != "HOJA VALIDADA:" and accion != "ignorar":
+                                if pregunta != "Pregunta" and pregunta != "ELEMENTO:" and pregunta != "HOJA VALIDADA:" and pregunta != "FECHA PRUEBA:" and accion != "ignorar":
                                     respuesta = fila[5].value
                                     hoja = fila[3].value
                                     celda = fila[2].value
