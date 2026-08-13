@@ -1302,6 +1302,7 @@ def validar_archivo():
 
                         case "ELEMENTO:":
                             elemento = respuesta[:7]
+                            print(f"El elemento escontrado es {elemento}")
                 
                 if coincidencia_mapa == 0:
 
