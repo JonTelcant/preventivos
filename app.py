@@ -1298,6 +1298,7 @@ def validar_archivo():
 
                         case "FECHA PRUEBA:":                        
                             aino = respuesta[-4:]
+                            print(f"El año del preventivo es {aino}")
 
                         case "ELEMENTO:":
                             elemento = respuesta[:7]
@@ -1308,7 +1309,9 @@ def validar_archivo():
                     # elemento = "2600123"
 
                     ruta_local_descargada = os.path.join(app.config['UPLOAD_FOLDER'], f"preventivo_{elemento}.xlsx")
+                    print(f"Crea la ruta local de descarga {ruta_local_descargada}")
                     ruta = f"preventivos/gipuzcoa/{aino}"
+                    print(f"Crea la ruta donde estan las respuestas en el servidor {ruta}")
                     # Llamas a la función de búsqueda y descarga
                     encontrado = descargar_archivo_por_elemento(
                         nombre_bucket="preventivos", 
@@ -1316,7 +1319,7 @@ def validar_archivo():
                         ruta_destino=ruta_local_descargada,
                         ruta=ruta
                     )
-
+                    print(f"Busca las respuestas en la ruta del servidor {encontrado}")
                     if encontrado:
                         # Continuas tu proceso leyendo 'ruta_local_descargada' con openpyxl
                         wb_respuestas = openpyxl.load_workbook(ruta_local_descargada)
