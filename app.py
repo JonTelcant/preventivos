@@ -1290,7 +1290,7 @@ def validar_archivo():
                     respuesta = hoja_preventivo[celda_respuesta].value
                     print (f"Pregunta es mapa es {pregunta_mapa} y la pregunta en el preventivo es {pregunta_preventivo}. La respuesta es {respuesta}")
                     if pregunta_mapa != pregunta_preventivo:
-                        print(f"Pregunta mapa = {pregunta_mapa} y pregunta preventivo = {pregunta_preventivo}")
+                        print(f"No coinciden Pregunta mapa = {pregunta_mapa} y pregunta preventivo = {pregunta_preventivo}")
                         coincidencia_mapa = 1
                         continue
 
@@ -1307,7 +1307,7 @@ def validar_archivo():
 
                     # Supongamos que ya procesaste tu archivo y extrajiste esto:
                     # elemento = "2600123"
-
+                    print("Todal las preguntas de mapa coinciden con las del preventivo...")
                     ruta_local_descargada = os.path.join(app.config['UPLOAD_FOLDER'], f"preventivo_{elemento}.xlsx")
                     print(f"Crea la ruta local de descarga {ruta_local_descargada}")
                     ruta = f"preventivos/gipuzcoa/{aino}"
