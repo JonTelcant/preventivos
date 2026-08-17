@@ -1340,9 +1340,12 @@ def validar_archivo():
                                     celda = fila[2].value
                                     hoja_preventivo = wb_preventivos[hoja]
                                     if accion == "rellenar":
-                                        if bool(re.match(patron, respuesta)):
-                                            respuesta = datetime.strptime(respuesta, "%d-%m-%Y").date()
-                                            hoja_preventivo[celda].number_format = "DD/MM/YYYY"                                    
+                                        try:
+                                            if bool(re.match(patron, respuesta)):
+                                                respuesta = datetime.strptime(respuesta, "%Y-%m-%d").date()
+                                                hoja_preventivo[celda].number_format = "DD/MM/YYYY"    
+                                        except Exception as e:
+                                            print(f"Error general en el try externo: {e}")                                
                                     hoja_preventivo[celda].value = respuesta
                                     print(f"{pregunta} = {respuesta}")
                                 
