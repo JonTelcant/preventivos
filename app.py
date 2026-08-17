@@ -1328,7 +1328,7 @@ def validar_archivo():
                         if tipo_preventivo in wb_respuestas.sheetnames:
                             hoja_respuestas = wb_respuestas[tipo_preventivo]
                             print(f"Hoja {tipo_preventivo} asignado correctamente")
-                            patron = r"^\d{2}-\d{2}-\d{4}$"
+                            patron = r"^\d{4}-\d{2}-\d{2}$"
                             for i, fila in enumerate(hoja_respuestas.rows):
                                 if i == 0:
                                     continue
