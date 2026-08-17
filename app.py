@@ -1328,7 +1328,9 @@ def validar_archivo():
                         if tipo_preventivo in wb_respuestas.sheetnames:
                             hoja_respuestas = wb_respuestas[tipo_preventivo]
                             print(f"Hoja {tipo_preventivo} asignado correctamente")
-                            for fila in hoja_respuestas.rows:
+                            for i, fila in enumerate(hoja_respuestas.rows):
+                                if i == 0:
+                                    continue
                                 pregunta = fila[0].value
                                 accion = fila[4].value
                                 if pregunta != "Pregunta" and pregunta != "ELEMENTO:" and pregunta != "HOJA VALIDADA:" and pregunta != "FECHA PRUEBA:" and accion != "ignorar":
