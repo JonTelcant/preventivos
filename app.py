@@ -1060,7 +1060,7 @@ def guardar_respuestas():
     
     if not title or not tipos:
         return jsonify({'success': False, 'message': 'Faltan datos: title o tipos'})
-    
+    patron = r"^\d{4}-\d{2}-\d{2}$"
     try:
         # Leer mapa_preventivos.xlsx para obtener la estructura original
         wb_mapa = openpyxl.load_workbook(MAPA_FILE)
@@ -1145,6 +1145,22 @@ def guardar_respuestas():
                     else:
                         # Rellenar con la respuesta obtenida del formulario
                         respuesta_usuario = respuestas.get(campo_nombre, '')
+                        if config == 'rellenar':
+                            match valor:
+                                case 'numero':
+                                    try:
+                                        respuesta_usuario = respuesta_usuario.replace(",", ".")
+                                        respuesta_usuario = float(respuesta_usuario)
+                                        hoja_respuestas.cell(row=row_idx, column=6).number_format = "0.00"
+                                    except Exception as e:
+                                        print(f"Error con el numero{e}")
+                                case 'fecha':
+                                    try:
+                                        if bool(re.match(patron, respuesta_usuario)):
+                                            respuesta_usuario = datetime.strptime(respuesta_usuario, "%Y-%m-%d").date()
+                                            hoja_respuestas.cell(row=row_idx, column=6).number_format = "DD/MM/YYYY"    
+                                    except Exception as e:
+                                        print(f"Error general al trabajar con fechas {e}")  
                         hoja_respuestas.cell(row=row_idx, column=6, value=respuesta_usuario)
                         # Si la configuración era 'lista', limpiar las columnas subsiguientes (G, H, etc.)
                         if config and str(config).lower() == 'lista':
