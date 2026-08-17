@@ -1157,6 +1157,7 @@ def guardar_respuestas():
                                 case 'fecha':
                                     try:
                                         if bool(re.match(patron, respuesta_usuario)):
+                                            print("Coincide el formato de fecha")
                                             respuesta_usuario = datetime.strptime(respuesta_usuario, "%Y-%m-%d").date()
                                             hoja_respuestas.cell(row=row_idx, column=6).number_format = "DD/MM/YYYY"    
                                     except Exception as e:
