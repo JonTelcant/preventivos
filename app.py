@@ -1146,7 +1146,7 @@ def guardar_respuestas():
                         # Rellenar con la respuesta obtenida del formulario
                         respuesta_usuario = respuestas.get(campo_nombre, '')
                         if config == 'rellenar':
-                            match valor:
+                            match valor_original:
                                 case 'numero':
                                     try:
                                         respuesta_usuario = respuesta_usuario.replace(",", ".")
