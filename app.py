@@ -1297,7 +1297,8 @@ def validar_archivo():
                     match pregunta_mapa:
 
                         case "FECHA PRUEBA:":
-                            aino = respuesta[-4:]                            
+                            aino = respuesta[-4:]
+                            print(f"El aino es {aino}")                         
 
                         case "ELEMENTO:":
                             elemento = respuesta[:7]
