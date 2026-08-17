@@ -1296,13 +1296,8 @@ def validar_archivo():
 
                     match pregunta_mapa:
 
-                        case "FECHA PRUEBA:":    
-                            print("Encuenta la pregunta FECHA PRUEBA:")                    
-                            if tipo_preventivo !="OC":
-                                aino = respuesta[-4:]
-                            else:
-                                aino = str(respuesta[:4])
-                            print(f"El año del preventivo es {aino}")
+                        case "FECHA PRUEBA:":
+                            aino = respuesta[-4:]                            
 
                         case "ELEMENTO:":
                             elemento = respuesta[:7]
