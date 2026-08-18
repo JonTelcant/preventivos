@@ -1083,10 +1083,21 @@ def guardar_respuestas():
             hoja_mapa = wb_mapa[tipo]
             # Crear la hoja correspondiente en el excel de respuestas
             hoja_respuestas = wb_respuestas.create_sheet(title=tipo)
-            
+            cont = 0
             # Copiar absolutamente todas las filas y columnas de la hoja original
             for r_idx, row in enumerate(hoja_mapa.iter_rows(values_only=True), start=1):
                 for c_idx, val in enumerate(row, start=1):
+                    if cont == 1:
+                        try:
+                            val = int(val)
+                            print(f"La respuesta por defecto {valor} convertido a int correctamente")
+                            hoja_respuestas.cell(row=r_idx, column=c_idx).number_format = "0"
+                        except Exception as e:
+                            print(f"La respuesta por defecto {valor} NO se ha podifo convertir a int correctamente")
+
+                        cont = 0
+                    elif val == "defecto":
+                        cont = 1  
                     hoja_respuestas.cell(row=r_idx, column=c_idx, value=val)
             
             # Reconstruir la lista de items exactamente igual que en /rellenar
@@ -1105,14 +1116,7 @@ def guardar_respuestas():
                     if config and str(config).lower().startswith('equipo'):
                         es_equipo = True
                         nombre_equipo = config
-
-                    if config == 'defecto':
-                        try:
-                            valor = int(valor)
-                            print(f"La respuesta por defecto {valor} convertido a int correctamente")
-                            hoja_respuestas.cell(row=row_idx, column=6).number_format = "0"
-                        except Exception as e:
-                            print(f"La respuesta por defecto {valor} NO se ha podifo convertir a int correctamente")                        
+                      
                     
                     # Solo incluir si la configuración es 'lista', 'rellenar' o 'equipoXX'
                     if config and (str(config).lower() in ['lista', 'rellenar'] or es_equipo):
