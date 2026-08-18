@@ -340,7 +340,7 @@
                     <div class="pregunta-item">
                         <label class="pregunta-label">Seleccionar Equipo</label>
                         <select class="campo-select equipo-select" id="equipo_select_{{ item.nombre_equipo }}" onchange="seleccionarEquipo(this, '{{ item.nombre_equipo }}')">
-                            
+                            <option value="" disabled selected>Seleccione un equipo...</option>
                             {# ABRIMOS EL BUCLE AQUÍ #}
                             {% for equipo in equipos_por_tipo[item.nombre_equipo].equipos_disponibles %}
                             <option value="{{ loop.index0 }}" data-valores='{{ equipo | tojson }}'>
