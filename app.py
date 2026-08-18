@@ -1141,6 +1141,12 @@ def guardar_respuestas():
                     # Si config es 'ignorar' o 'defecto' (aunque en teoría no se renderizan, se controla por seguridad)
                     if config and str(config).lower() in ['ignorar', 'defecto']:
                         # Mantener el valor original en columna F
+                        try:
+                            valor_original = int(valor_original)
+                            hoja_respuestas.cell(row=row_idx, column=6).number_format = "0"
+                        except Exception as e:
+                            pass
+
                         hoja_respuestas.cell(row=row_idx, column=6, value=valor_original)
                     else:
                         # Rellenar con la respuesta obtenida del formulario
@@ -1150,8 +1156,12 @@ def guardar_respuestas():
                                 case 'numero':
                                     try:
                                         respuesta_usuario = respuesta_usuario.replace(",", ".")
-                                        respuesta_usuario = float(respuesta_usuario)
-                                        hoja_respuestas.cell(row=row_idx, column=6).number_format = "0.00"
+                                        if "." in respuesta_usuario:
+                                            respuesta_usuario = float(respuesta_usuario)
+                                            hoja_respuestas.cell(row=row_idx, column=6).number_format = "0.00"
+                                        else:
+                                            respuesta_usuario = int(respuesta_usuario)
+                                            hoja_respuestas.cell(row=row_idx, column=6).number_format = "0"                                          
                                     except Exception as e:
                                         print(f"Error con el numero{e}")
                                 case 'fecha':
@@ -1355,14 +1365,8 @@ def validar_archivo():
                                     respuesta = fila[5].value
                                     hoja = fila[3].value
                                     celda = fila[2].value
-                                    hoja_preventivo = wb_preventivos[hoja]
-                                    if accion == "rellenar":
-                                        try:
-                                            if bool(re.match(patron, respuesta)):
-                                                respuesta = datetime.strptime(respuesta, "%Y-%m-%d").date()
-                                                hoja_preventivo[celda].number_format = "DD/MM/YYYY"    
-                                        except Exception as e:
-                                            print(f"Error general en el try externo: {e}")                                
+                                    hoja_preventivo = wb_preventivos[hoja]   
+                                    hoja_preventivo[celda].number_format = fila[5].number_format                            
                                     hoja_preventivo[celda].value = respuesta
                                     print(f"{pregunta} = {respuesta}")
                                 
