@@ -1105,6 +1105,14 @@ def guardar_respuestas():
                     if config and str(config).lower().startswith('equipo'):
                         es_equipo = True
                         nombre_equipo = config
+
+                    if config == 'defecto':
+                        try:
+                            valor = int(valor)
+                            print(f"La respuesta por defecto {valor} convertido a int correctamente")
+                            hoja_respuestas.cell(row=row_idx, column=6).number_format = "0"
+                        except Exception as e:
+                            print(f"La respuesta por defecto {valor} NO se ha podifo convertir a int correctamente")                        
                     
                     # Solo incluir si la configuración es 'lista', 'rellenar' o 'equipoXX'
                     if config and (str(config).lower() in ['lista', 'rellenar'] or es_equipo):
