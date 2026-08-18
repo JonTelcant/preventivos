@@ -1090,10 +1090,10 @@ def guardar_respuestas():
                     if cont == 1:
                         try:
                             val = int(val)
-                            print(f"La respuesta por defecto {valor} convertido a int correctamente")
+                            print(f"La respuesta por defecto {val} convertido a int correctamente")
                             hoja_respuestas.cell(row=r_idx, column=c_idx).number_format = "0"
                         except Exception as e:
-                            print(f"La respuesta por defecto {valor} NO se ha podifo convertir a int correctamente")
+                            print(f"La respuesta por defecto {val} NO se ha podifo convertir a int correctamente")
 
                         cont = 0
                     elif val == "defecto":
