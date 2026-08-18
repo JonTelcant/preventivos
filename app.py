@@ -147,7 +147,8 @@ def accion_a_tipos(accion):
         'MP EB BT SBAL ANUAL': 'BT',
         'MP EB CF ANUAL SB': 'CF',
         'MP CABLE DE VIDA SOP. ANT': 'GS',
-        'MP EB ANTENA ANUAL PI': 'SA'
+        'MP EB ANTENA ANUAL PI': 'SA',
+        'MP EB BALIZA ANUAL': 'BA'
     }
     
     # Buscar coincidencias exactas en el texto de acción
@@ -289,18 +290,9 @@ def obtener_tipo_preventivo(nombre_archivo):
         return 'BT'
     elif '_CF' in nombre_upper:
         return 'CF'
+    elif 'EBBAL' in nombre_upper:
+        return 'BA'
     else:
-        # Fallback
-        if 'SA' in nombre_upper:
-            return 'SA'
-        elif 'GS' in nombre_upper:
-            return 'GS'
-        elif 'OC' in nombre_upper:
-            return 'OC'
-        elif 'BT' in nombre_upper:
-            return 'BT'
-        elif 'CF' in nombre_upper:
-            return 'CF'
         return 'DESCONOCIDO'
 
 def validar_archivo_preventivo(ruta_archivo):
