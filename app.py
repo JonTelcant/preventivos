@@ -1107,7 +1107,7 @@ def guardar_respuestas():
                         nombre_equipo = config
                     
                     # Solo incluir si la configuración es 'lista', 'rellenar' o 'equipoXX'
-                    if config and (str(config).lower() in ['lista', 'rellenar', 'defecto'] or es_equipo):
+                    if config and (str(config).lower() in ['lista', 'rellenar'] or es_equipo):
                         if es_equipo and nombre_equipo not in equipos_procesados:
                             # Añadir selector (que incrementa el loop.index en rellenar.html)
                             items_mapeados.append({
