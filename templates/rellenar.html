@@ -340,15 +340,7 @@
                         <label class="pregunta-label">Seleccionar Equipo</label>
                         <select class="campo-select equipo-select" id="equipo_select_{{ item.nombre_equipo }}" onchange="seleccionarEquipo(this, '{{ item.nombre_equipo }}')">
                             <option value="{{ loop.index0 }}" data-valores="{{ equipo }}">
-                                {% set nombre = equipo[0] if equipo else 'Sin nombre' %}
-                                
-                                {# Mostramos el nombre siempre #}
-                                {{ nombre }}
-                                
-                                {# Mostramos el modelo solo si no es equipoPDU #}
-                                {% if item.nombre_equipo != 'equipoPDU' and equipo[1] %}
-                                    - {{ equipo[1] }}
-                                {% endif %}
+                                {{ equipo[0] if equipo else 'Sin nombre' }}
                             </option>
                             {% endfor %}
                         </select>
