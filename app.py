@@ -1107,7 +1107,7 @@ def guardar_respuestas():
                         nombre_equipo = config
                     
                     # Solo incluir si la configuración es 'lista', 'rellenar' o 'equipoXX'
-                    if config and (str(config).lower() in ['lista', 'rellenar'] or es_equipo):
+                    if config and (str(config).lower() in ['lista', 'rellenar', 'defecto'] or es_equipo):
                         if es_equipo and nombre_equipo not in equipos_procesados:
                             # Añadir selector (que incrementa el loop.index en rellenar.html)
                             items_mapeados.append({
@@ -1156,22 +1156,23 @@ def guardar_respuestas():
                             match valor_original:
                                 case 'numero':
                                     try:
-                                        respuesta_usuario = respuesta_usuario.replace(",", ".")
-                                        if "." in respuesta_usuario:
-                                            respuesta_usuario = float(respuesta_usuario)
-                                            print(f"La respuesta del usuario {respuesta_usuario} convertido a float correctamente")
-                                            hoja_respuestas.cell(row=row_idx, column=6).number_format = "0.00"
-                                        else:
-                                            respuesta_usuario = int(respuesta_usuario)
-                                            print(f"La respuesta del usuario {respuesta_usuario} convertido a int correctamente")
-                                            hoja_respuestas.cell(row=row_idx, column=6).number_format = "0"                                          
+                                        if respuesta_usuario != "":
+                                            respuesta_usuario = respuesta_usuario.replace(",", ".")
+                                            if "." in respuesta_usuario:
+                                                respuesta_usuario = float(respuesta_usuario)
+                                                print(f"La respuesta del usuario {respuesta_usuario} convertido a float correctamente")
+                                                hoja_respuestas.cell(row=row_idx, column=6).number_format = "0.00"
+                                            else:
+                                                respuesta_usuario = int(respuesta_usuario)
+                                                print(f"La respuesta del usuario {respuesta_usuario} convertido a int correctamente")
+                                                hoja_respuestas.cell(row=row_idx, column=6).number_format = "0"                                          
                                     except Exception as e:
                                         print(f"Error al intentar convertir en numero {respuesta_usuario}: {e}")
                                 case 'fecha':
                                     try:
                                         if bool(re.match(patron, respuesta_usuario)):
-                                            #print("Coincide el formato de fecha")
                                             respuesta_usuario = datetime.strptime(respuesta_usuario, "%Y-%m-%d").date()
+                                            print(f"La respuesta del usuario {respuesta_usuario} convertida correctamente a fecha")
                                             hoja_respuestas.cell(row=row_idx, column=6).number_format = "DD/MM/YYYY"    
                                     except Exception as e:
                                         print(f"Error al intentar convertir a fecha {respuesta_usuario}: {e}")  
