@@ -31,7 +31,7 @@ def obtener_cliente_r2():
     """Obtiene el cliente de Cloudflare R2 configurado."""
     try:
         if not all([R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY]):
-            print("Error: Faltan credenciales de R2 en variables de entorno")
+            #print("Error: Faltan credenciales de R2 en variables de entorno")
             return None
         
         s3_client = boto3.client(
@@ -43,7 +43,7 @@ def obtener_cliente_r2():
         )
         return s3_client
     except Exception as e:
-        print(f"Error al configurar cliente R2: {str(e)}")
+        #print(f"Error al configurar cliente R2: {str(e)}")
         return None
 
 def subir_archivo_r2(ruta_archivo, nombre_archivo, carpeta_destino):
@@ -537,7 +537,7 @@ def guardar_configuracion_mapa(tipo_preventivo, configuraciones, info_especial):
     """
     try:  
         descargar_archivo_r2('mapa_preventivos.xlsx', 'preventivos', MAPA_FILE)
-        print("Archimo mapa_preventivos descargado del servidor")
+        #print("Archimo mapa_preventivos descargado del servidor")
         if os.path.exists(MAPA_FILE):
             print(f"El archivo existe. Ruta absoluta: {os.path.abspath(MAPA_FILE)}")
             print(f"Tamaño del archivo en bytes: {os.path.getsize(MAPA_FILE)}")
@@ -612,12 +612,12 @@ def guardar_configuracion_mapa(tipo_preventivo, configuraciones, info_especial):
             fila += 1
         
         wb.save(MAPA_FILE)
-        print("Archivo mapa_preventivos guardado correctamente en la carpeta temporal")
+        #print("Archivo mapa_preventivos guardado correctamente en la carpeta temporal")
         wb.close()
         #ruta_temporal = os.path.join(DOWNLOAD_FOLDER, "mapa_preventivos.xlsx")
         carpeta_destino = "preventivos"
         exito_r2, mensaje_r2 = subir_archivo_r2(MAPA_FILE, "mapa_preventivos.xlsx", carpeta_destino)
-        print ("Archivo mapa_preventivos subido correctamente al servidor")
+        #print ("Archivo mapa_preventivos subido correctamente al servidor")
         # Limpiar archivo temporal
         os.remove(MAPA_FILE)
         return True, None
@@ -649,7 +649,7 @@ def rellenar():
         
         # NUEVO: Comprobar tamaño del archivo descargado
         tamano = os.path.getsize(ruta_local)
-        print(f"Tamaño del archivo descargado: {tamano} bytes")
+        #print(f"Tamaño del archivo descargado: {tamano} bytes")
         if tamano < 1000:
             # Si pesa muy poco, seguramente descargó un error en texto y no el Excel
             with open(ruta_local, 'r', encoding='utf-8', errors='ignore') as f:
@@ -1143,9 +1143,10 @@ def guardar_respuestas():
                         # Mantener el valor original en columna F
                         try:
                             valor_original = int(valor_original)
+                            print(f"La respuesta por defecto {valor_original} convertido a int correctamente")
                             hoja_respuestas.cell(row=row_idx, column=6).number_format = "0"
                         except Exception as e:
-                            pass
+                            print(f"La respuesta por defecto {valor_original} NO se ha podifo convertir a int correctamente")
 
                         hoja_respuestas.cell(row=row_idx, column=6, value=valor_original)
                     else:
@@ -1158,20 +1159,22 @@ def guardar_respuestas():
                                         respuesta_usuario = respuesta_usuario.replace(",", ".")
                                         if "." in respuesta_usuario:
                                             respuesta_usuario = float(respuesta_usuario)
+                                            print(f"La respuesta del usuario {respuesta_usuario} convertido a float correctamente")
                                             hoja_respuestas.cell(row=row_idx, column=6).number_format = "0.00"
                                         else:
                                             respuesta_usuario = int(respuesta_usuario)
+                                            print(f"La respuesta del usuario {respuesta_usuario} convertido a int correctamente")
                                             hoja_respuestas.cell(row=row_idx, column=6).number_format = "0"                                          
                                     except Exception as e:
-                                        print(f"Error con el numero{e}")
+                                        print(f"Error al intentar convertir en numero {respuesta_usuario}: {e}")
                                 case 'fecha':
                                     try:
                                         if bool(re.match(patron, respuesta_usuario)):
-                                            print("Coincide el formato de fecha")
+                                            #print("Coincide el formato de fecha")
                                             respuesta_usuario = datetime.strptime(respuesta_usuario, "%Y-%m-%d").date()
                                             hoja_respuestas.cell(row=row_idx, column=6).number_format = "DD/MM/YYYY"    
                                     except Exception as e:
-                                        print(f"Error general al trabajar con fechas {e}")  
+                                        print(f"Error al intentar convertir a fecha {respuesta_usuario}: {e}")  
                         hoja_respuestas.cell(row=row_idx, column=6, value=respuesta_usuario)
                         # Si la configuración era 'lista', limpiar las columnas subsiguientes (G, H, etc.)
                         if config and str(config).lower() == 'lista':
@@ -1229,7 +1232,7 @@ def descargar_archivo_por_elemento(nombre_bucket, elemento_buscado, ruta_destino
         response = s3_client.list_objects_v2(Bucket=nombre_bucket, Prefix=ruta)
 
         if 'Contents' not in response:
-            print("El bucket está vacío.")
+            #print("El bucket está vacío.")
             return False
 
         archivo_encontrado = None
@@ -1245,15 +1248,15 @@ def descargar_archivo_por_elemento(nombre_bucket, elemento_buscado, ruta_destino
 
         # 3. Si lo encontramos, lo descargamos
         if archivo_encontrado:
-            print(f"¡Archivo encontrado: {archivo_encontrado}! Descargando...")
+            #print(f"¡Archivo encontrado: {archivo_encontrado}! Descargando...")
             s3_client.download_file(nombre_bucket, archivo_encontrado, ruta_destino)
             return True
         else:
-            print(f"No se encontró ningún archivo que contenga los dígitos: {elemento_buscado}")
+            #print(f"No se encontró ningún archivo que contenga los dígitos: {elemento_buscado}")
             return False
 
     except Exception as e:
-        print(f"Error al buscar/descargar el archivo: {e}")
+        #print(f"Error al buscar/descargar el archivo: {e}")
         return False
 
 @app.route('/validar_preventivo', methods=['POST'])
@@ -1278,7 +1281,7 @@ def validar_archivo():
                 # 1. Guardar el archivo subido en el servidor
                 filepath_preventivos = os.path.join(app.config['UPLOAD_FOLDER'], filename_preventivos)
                 file.save(filepath_preventivos)
-                print(f"Ruta del archivo en el servidor {filepath_preventivos}")
+                #print(f"Ruta del archivo en el servidor {filepath_preventivos}")
 
                 # 2. Cargar el archivo de preventivos
                 wb_preventivos = openpyxl.load_workbook(filepath_preventivos)
@@ -1315,9 +1318,9 @@ def validar_archivo():
                     hoja_preventivo = wb_preventivos[nombre_hoja_preventivo]
                     pregunta_preventivo = hoja_preventivo[celda_mapa].value
                     respuesta = hoja_preventivo[celda_respuesta].value
-                    print (f"Pregunta es mapa es {pregunta_mapa} y la pregunta en el preventivo es {pregunta_preventivo}. La respuesta es {respuesta}")
+                    #print (f"Pregunta es mapa es {pregunta_mapa} y la pregunta en el preventivo es {pregunta_preventivo}. La respuesta es {respuesta}")
                     if pregunta_mapa != pregunta_preventivo:
-                        print(f"No coinciden Pregunta mapa = {pregunta_mapa} y pregunta preventivo = {pregunta_preventivo}")
+                        #print(f"No coinciden Pregunta mapa = {pregunta_mapa} y pregunta preventivo = {pregunta_preventivo}")
                         coincidencia_mapa = 1
                         continue
 
@@ -1325,21 +1328,21 @@ def validar_archivo():
 
                         case "FECHA PRUEBA:":
                             aino = respuesta[-4:]
-                            print(f"El aino es {aino}")                         
+                            #print(f"El aino es {aino}")                         
 
                         case "ELEMENTO:":
                             elemento = respuesta[:7]
-                            print(f"El elemento escontrado es {elemento}")
+                            #print(f"El elemento escontrado es {elemento}")
                 
                 if coincidencia_mapa == 0:
 
                     # Supongamos que ya procesaste tu archivo y extrajiste esto:
                     # elemento = "2600123"
-                    print("Todal las preguntas de mapa coinciden con las del preventivo...")
+                    #print("Todal las preguntas de mapa coinciden con las del preventivo...")
                     ruta_local_descargada = os.path.join(app.config['UPLOAD_FOLDER'], f"preventivo_{elemento}.xlsx")
-                    print(f"Crea la ruta local de descarga {ruta_local_descargada}")
+                    #print(f"Crea la ruta local de descarga {ruta_local_descargada}")
                     ruta = f"preventivos/gipuzcoa/{aino}"
-                    print(f"Crea la ruta donde estan las respuestas en el servidor {ruta}")
+                    #print(f"Crea la ruta donde estan las respuestas en el servidor {ruta}")
                     # Llamas a la función de búsqueda y descarga
                     encontrado = descargar_archivo_por_elemento(
                         nombre_bucket="preventivos", 
@@ -1347,14 +1350,14 @@ def validar_archivo():
                         ruta_destino=ruta_local_descargada,
                         ruta=ruta
                     )
-                    print(f"Busca las respuestas en la ruta del servidor {encontrado}")
+                    #print(f"Busca las respuestas en la ruta del servidor {encontrado}")
                     if encontrado:
                         # Continuas tu proceso leyendo 'ruta_local_descargada' con openpyxl
                         wb_respuestas = openpyxl.load_workbook(ruta_local_descargada)
-                        print(f"{ruta_local_descargada} habierto correctamente")
+                        #print(f"{ruta_local_descargada} habierto correctamente")
                         if tipo_preventivo in wb_respuestas.sheetnames:
                             hoja_respuestas = wb_respuestas[tipo_preventivo]
-                            print(f"Hoja {tipo_preventivo} asignado correctamente")
+                            #print(f"Hoja {tipo_preventivo} asignado correctamente")
                             patron = r"^\d{4}-\d{2}-\d{2}$"
                             for i, fila in enumerate(hoja_respuestas.rows):
                                 if i == 0:
@@ -1368,14 +1371,14 @@ def validar_archivo():
                                     hoja_preventivo = wb_preventivos[hoja]   
                                     hoja_preventivo[celda].number_format = fila[5].number_format                            
                                     hoja_preventivo[celda].value = respuesta
-                                    print(f"{pregunta} = {respuesta}")
+                                    #print(f"{pregunta} = {respuesta}")
                                 
                             wb_preventivos.properties.fullCalcOnLoad = True
                             wb_preventivos.save(filepath_preventivos) 
                             wb_preventivos.close()
                             wb_mapa.close()
                             wb_respuestas.close()
-                            print(f"Ruta del archivo en el servidor = {filepath_preventivos}\n Nombre del archivo a descargar = {file.filename}")
+                            #print(f"Ruta del archivo en el servidor = {filepath_preventivos}\n Nombre del archivo a descargar = {file.filename}")
                             return send_file(filepath_preventivos, as_attachment=True, download_name=file.filename)                            
                             #return jsonify({'success': False, 'error': f'Se encontró la hoja {tipo_preventivo} en la respuestas'}), 404
                         else:
